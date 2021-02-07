@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
+import liquibase.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -205,6 +206,20 @@ public class DictionaryService {
                 "Как зовут нового пользователя?");
             session.setState(SessionState.PENDING_NEW_USER_NAME);
             dictiondaryDao.updateSessionState(session);
+        } else if (session.getState() == SessionState.PENDING_NEW_USER_NAME && commandDefined(skillRequest)) {
+            String newUserName = skillRequest.getCommand();
+
+            if (dictiondaryDao.checkUserNameExistsOnDevice(yandexSession, newUserName.toLowerCase())) {
+                yandexAliceResponse.getResponse().setText(String.format(
+                    "Пользователь с именем %1$s уже есть на вашем устройстве. Назовите другое имя.",
+                    Arrays.stream(newUserName.toLowerCase().split(" ")).map(
+                        t -> t.substring(0, 1).toUpperCase() + t.substring(1)
+                    ).collect(Collectors.joining(" "))
+                ));
+                session.setState(SessionState.PENDING_NEW_USER_NAME);
+                dictiondaryDao.updateSessionState(session);
+            }
+
         } else if (session.getState() == SessionState.PENDING_TEST_DICTIONARY && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null) {
             if (tokensContain(skillRequest.getNlu().getTokens(), "общего") >= 0) {

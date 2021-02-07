@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_ENG_TRANSLATION;
 import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_NAME;
 import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_NEW_TERM;
+import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_NEW_USER_NAME;
 import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_RUS_TRANSLATION;
 import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_TEST_DICTIONARY;
 import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_TEST_RESPONSE;
@@ -648,6 +649,20 @@ public class DictionaryServiceUT {
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Как зовут нового пользователя?").please(), yaResponse);
+        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
+    }
+
+    @Test
+    void should_ask_again_for_name_when_state_is_PENDING_NEW_USER_NAME_and_dictionaryDao_return_true_when_calling_checkUserNameExistsOnDevice_with_new_user_name_supplied() {
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("василий петрович").please();
+        serviceUser = createServiceUser();
+        session = newSession().withState(PENDING_NEW_USER_NAME).please();
+        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(dictionaryDao.checkUserNameExistsOnDevice(yaRequest.getSession(), "василий петрович")).thenReturn(true);
+
+        yaResponse = sut.talkYandexAlice(yaRequest);
+
+        assertEquals(New.yaResponse("Пользователь с именем Василий Петрович уже есть на вашем устройстве. Назовите другое имя.").please(), yaResponse);
         verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
     }
 

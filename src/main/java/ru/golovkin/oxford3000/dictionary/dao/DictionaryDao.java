@@ -284,4 +284,8 @@ public class DictionaryDao {
 
         return userCount > 0? userCountWithLessDictionarySize * 100 / userCount: 0;
     }
+
+    public boolean checkUserNameExistsOnDevice(YASession session, String вася) {
+        return true;
+    }
 }
