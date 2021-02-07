@@ -656,7 +656,7 @@ public class DictionaryDaoTest {
     @Test
     @Transactional
     void return_false_when_calling_checkUserNameExistsOnDevice_and_no_record_in_users_with_such_name_userId_appId() {
-        ServiceUser user = createDefaultUser("коля", userId, appId);
+        ServiceUser user = createDefaultUser("коля", userId, appId + "1");
         entityManager.persist(user);
         session = newSession().please();
 
@@ -671,5 +671,23 @@ public class DictionaryDaoTest {
         session = newSession().please();
 
         assertFalse(sut.checkUserNameExistsOnDevice(New.yaRequest(appId).please().getSession(), "вася"));
+    }
+
+    @Test
+    @Transactional
+    void return_true_when_calling_checkUserNameExistsOnDevice_and_no_record_in_users_with_such_name_userId_appId() {
+        ServiceUser user = createDefaultUser("ВАСЯ", userId, appId + "1");
+        entityManager.persist(user);
+
+        assertTrue(sut.checkUserNameExistsOnDevice(New.yaRequest(appId).withUserId(userId).please().getSession(), "вася"));
+    }
+
+    @Test
+    @Transactional
+    void return_true_when_calling_checkUserNameExistsOnDevice_and_no_record_in_users_with_such_name_appId_and_empty_user_id() {
+        ServiceUser user = createDefaultUser("ВАСЯ", null, appId);
+        entityManager.persist(user);
+
+        assertTrue(sut.checkUserNameExistsOnDevice(New.yaRequest(appId).please().getSession(), "вася"));
     }
 }

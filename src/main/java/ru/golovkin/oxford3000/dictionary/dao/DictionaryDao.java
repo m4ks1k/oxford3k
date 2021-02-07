@@ -294,11 +294,14 @@ public class DictionaryDao {
         TypedQuery<Integer> query = entityManager.createQuery(
             "select cast(count(1) as integer) as cnt "
             + " from ServiceUser u "
-            + " where u.userSource = :userSource and u.extAppId = :extAppId and u.name = lower(:user)"
+            + " where u.userSource = :userSource and lower(u.name) = :user"
+            + (userId == null?" and u.extAppId = :extAppId ":"")
             + " and u.extUserId " + (userId == null? "is null ":  "= :extUserId"),
             Integer.class);
         query.setParameter("userSource", UserSource.YANDEX_ALICE);
-        query.setParameter("extAppId", session.getApplication().getApplicationId());
+        if (userId == null) {
+            query.setParameter("extAppId", session.getApplication().getApplicationId());
+        }
         if (userId != null) {
             query.setParameter("extUserId", userId);
         }
