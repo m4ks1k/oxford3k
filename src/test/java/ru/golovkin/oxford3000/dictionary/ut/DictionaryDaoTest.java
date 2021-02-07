@@ -652,4 +652,14 @@ public class DictionaryDaoTest {
 
         assertEquals(75, percentile);
     }
+
+    @Test
+    @Transactional
+    void return_false_when_calling_checkUserNameExistsOnDevice_and_no_record_in_users_with_such_name_userId_appId() {
+        ServiceUser user = createDefaultUser("коля", userId, appId);
+        entityManager.persist(user);
+        session = newSession().please();
+
+        assertFalse(sut.checkUserNameExistsOnDevice(New.yaRequest(appId).withUserId(userId).please().getSession(), "вася"));
+    }
 }

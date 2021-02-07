@@ -285,7 +285,17 @@ public class DictionaryDao {
         return userCount > 0? userCountWithLessDictionarySize * 100 / userCount: 0;
     }
 
-    public boolean checkUserNameExistsOnDevice(YASession session, String вася) {
-        return true;
+    public boolean checkUserNameExistsOnDevice(YASession session, String userName) {
+        TypedQuery<Integer> query = entityManager.createQuery(
+            "select cast(count(1) as integer) as cnt "
+            + " from ServiceUser u "
+            + " where u.userSource = :userSource and u.extAppId = :extAppId and u.extUserId = :extUserId and u.name = lower(:user)",
+            Integer.class);
+        query.setParameter("userSource", UserSource.YANDEX_ALICE);
+        query.setParameter("extAppId", session.getApplication().getApplicationId());
+        query.setParameter("extUserId", session.getUser().getUserId());
+        query.setParameter("user", userName.toLowerCase());
+
+        return query.getSingleResult() > 0;
     }
 }
