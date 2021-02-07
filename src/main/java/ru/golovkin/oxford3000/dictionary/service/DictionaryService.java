@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.golovkin.oxford3000.dictionary.dao.DictionaryDao;
 import ru.golovkin.oxford3000.dictionary.model.Language;
+import ru.golovkin.oxford3000.dictionary.model.ServiceUser;
 import ru.golovkin.oxford3000.dictionary.model.Session;
 import ru.golovkin.oxford3000.dictionary.model.SessionState;
 import ru.golovkin.oxford3000.dictionary.model.Term;
@@ -214,14 +215,21 @@ public class DictionaryService {
             }
 
             if (dictiondaryDao.checkUserNameExistsOnDevice(yandexSession, newUserName.toLowerCase())) {
+                String capitalizedName = capitalize(newUserName);
                 yandexAliceResponse.getResponse().setText(String.format(
                     "Пользователь с именем %1$s уже есть на вашем устройстве. Назовите другое имя.",
-                    Arrays.stream(newUserName.toLowerCase().split(" ")).map(
-                        t -> t.substring(0, 1).toUpperCase() + t.substring(1)
-                    ).collect(Collectors.joining(" "))
+                    capitalizedName
                 ));
                 session.setState(SessionState.PENDING_NEW_USER_NAME);
                 dictiondaryDao.updateSessionState(session);
+            } else {
+                ServiceUser newUser = dictiondaryDao.addNewUser(yandexSession, capitalize(newUserName));
+                session.setServiceUser(newUser);
+                session.setState(SessionState.PENDING_NEW_TERM);
+                dictiondaryDao.updateSessionState(session);
+                yandexAliceResponse.getResponse().setText(String.format(
+                    "Пользователь %1$s добавлен на ваше устройство.", capitalize(newUserName)
+                ));
             }
 
         } else if (session.getState() == SessionState.PENDING_TEST_DICTIONARY && commandDefined(skillRequest) &&
@@ -317,6 +325,12 @@ public class DictionaryService {
         }
 
         return yandexAliceResponse;
+    }
+
+    private String capitalize(String newUserName) {
+        return Arrays.stream(newUserName.toLowerCase().split(" ")).map(
+            t -> t.substring(0, 1).toUpperCase() + t.substring(1)
+        ).collect(Collectors.joining(" "));
     }
 
     private String definedEntityFIO(YASkillRequest skillRequest) {

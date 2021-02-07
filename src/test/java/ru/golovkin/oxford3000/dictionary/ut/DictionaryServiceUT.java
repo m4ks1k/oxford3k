@@ -640,7 +640,7 @@ public class DictionaryServiceUT {
     }
 
     @Test
-    void should_ask_for_name_when_state_is_PENDING_TERM_and_user_ask_to_add_new_user() {
+    void should_ask_for_name_and_set_state_PENDING_NEW_USER_NAME_when_state_is_PENDING_TERM_and_user_ask_to_add_new_user() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("добавь пользователя").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
@@ -664,6 +664,26 @@ public class DictionaryServiceUT {
 
         assertEquals(New.yaResponse("Пользователь с именем Василий Петрович уже есть на вашем устройстве. Назовите другое имя.").please(), yaResponse);
         verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
+    }
+
+    @Test
+    void should_call_addNewUser_and_update_userId_in_session_and_set_state_PENDING_NEW_TERM_when_state_is_PENDING_NEW_USER_NAME_and_dictionaryDao_return_false_when_calling_checkUserNameExistsOnDevice_with_new_user_name_supplied() {
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("меня зовут василий петрович").with(
+            New.entity("YANDEX.FIO").from(2).to(4).withValue("{\"first_name\": \"василий\", \"patronymic_name\": \"петрович\"}").please()
+        ).please();
+        serviceUser = createServiceUser();
+        ServiceUser newServiceUser = createServiceUser("василий петрович", userId);
+        session = newSession().withState(PENDING_NEW_USER_NAME).please();
+        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(dictionaryDao.checkUserNameExistsOnDevice(yaRequest.getSession(), "василий петрович")).thenReturn(false);
+        when(dictionaryDao.addNewUser(yaRequest.getSession(), "Василий Петрович")).thenReturn(newServiceUser);
+
+        yaResponse = sut.talkYandexAlice(yaRequest);
+
+        assertEquals(New.yaResponse("Пользователь Василий Петрович добавлен на ваше устройство.").please(), yaResponse);
+        verify(dictionaryDao, atLeastOnce()).addNewUser(yaRequest.getSession(), "Василий Петрович");
+        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withUser(newServiceUser).withState(
+            PENDING_NEW_TERM).please());
     }
 
     @Test

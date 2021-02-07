@@ -309,4 +309,8 @@ public class DictionaryDao {
 
         return query.getSingleResult() > 0;
     }
+
+    public ServiceUser addNewUser(YASession session, String userName) {
+        return null;
+    }
 }
