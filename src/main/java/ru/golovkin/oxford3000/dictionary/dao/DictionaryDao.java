@@ -9,6 +9,7 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import ru.golovkin.oxford3000.dictionary.model.Language;
@@ -286,14 +287,21 @@ public class DictionaryDao {
     }
 
     public boolean checkUserNameExistsOnDevice(YASession session, String userName) {
+        String userId =
+            session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())?
+            session.getUser().getUserId() :
+            null;
         TypedQuery<Integer> query = entityManager.createQuery(
             "select cast(count(1) as integer) as cnt "
             + " from ServiceUser u "
-            + " where u.userSource = :userSource and u.extAppId = :extAppId and u.extUserId = :extUserId and u.name = lower(:user)",
+            + " where u.userSource = :userSource and u.extAppId = :extAppId and u.name = lower(:user)"
+            + " and u.extUserId " + (userId == null? "is null ":  "= :extUserId"),
             Integer.class);
         query.setParameter("userSource", UserSource.YANDEX_ALICE);
         query.setParameter("extAppId", session.getApplication().getApplicationId());
-        query.setParameter("extUserId", session.getUser().getUserId());
+        if (userId != null) {
+            query.setParameter("extUserId", userId);
+        }
         query.setParameter("user", userName.toLowerCase());
 
         return query.getSingleResult() > 0;

@@ -662,4 +662,14 @@ public class DictionaryDaoTest {
 
         assertFalse(sut.checkUserNameExistsOnDevice(New.yaRequest(appId).withUserId(userId).please().getSession(), "вася"));
     }
+
+    @Test
+    @Transactional
+    void return_false_when_calling_checkUserNameExistsOnDevice_and_no_record_in_users_with_such_name_appId_and_empty_user_id() {
+        ServiceUser user = createDefaultUser("коля", null, appId);
+        entityManager.persist(user);
+        session = newSession().please();
+
+        assertFalse(sut.checkUserNameExistsOnDevice(New.yaRequest(appId).please().getSession(), "вася"));
+    }
 }
