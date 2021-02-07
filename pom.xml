@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>ru.golovkin.oxford3000</groupId>
 	<artifactId>dictionary-service</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<name>Oxford 3000 Dictionary Service</name>
 	<description>Oxford 3000 Dictionary Service</description>
 
