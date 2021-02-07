@@ -9,6 +9,7 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.User;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -311,6 +312,10 @@ public class DictionaryDao {
     }
 
     public ServiceUser addNewUser(YASession session, String userName) {
-        return null;
+        ServiceUser user = new ServiceUser(null, userName, UserSource.YANDEX_ALICE,
+            session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())?
+            session.getUser().getUserId().trim():null, session.getApplication().getApplicationId());
+        entityManager.persist(user);
+        return user;
     }
 }

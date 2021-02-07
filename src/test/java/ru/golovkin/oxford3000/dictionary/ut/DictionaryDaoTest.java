@@ -690,4 +690,26 @@ public class DictionaryDaoTest {
 
         assertTrue(sut.checkUserNameExistsOnDevice(New.yaRequest(appId).please().getSession(), "вася"));
     }
+
+    @Test
+    @Transactional
+    void should_add_new_record_in_user_with_given_name_appId_and_null_userId_when_calling_addNewUser_and_userId_is_empty() {
+        serviceUser = createDefaultUser("Василий Иванович", null, appId);
+        entityManager.persist(serviceUser);
+
+        ServiceUser newServiceUser = sut.addNewUser(New.yaRequest(appId).please().getSession(), "Василий Петрович");
+
+        assertEquals(createDefaultUser("Василий Петрович", null, appId), newServiceUser);
+    }
+
+    @Test
+    @Transactional
+    void should_add_new_record_in_user_with_given_name_appId_and_userId_when_calling_addNewUser_and_userId_is_not_empty() {
+        serviceUser = createDefaultUser("Василий Иванович", userId, appId);
+        entityManager.persist(serviceUser);
+
+        ServiceUser newServiceUser = sut.addNewUser(New.yaRequest(appId).withUserId(userId).please().getSession(), "Василий Петрович");
+
+        assertEquals(createDefaultUser("Василий Петрович", userId, appId), newServiceUser);
+    }
 }
