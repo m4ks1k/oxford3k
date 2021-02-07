@@ -208,6 +208,10 @@ public class DictionaryService {
             dictiondaryDao.updateSessionState(session);
         } else if (session.getState() == SessionState.PENDING_NEW_USER_NAME && commandDefined(skillRequest)) {
             String newUserName = skillRequest.getCommand();
+            String newNameFromNLU;
+            if ((newNameFromNLU = definedEntityFIO(skillRequest)) != null) {
+                newUserName = newNameFromNLU;
+            }
 
             if (dictiondaryDao.checkUserNameExistsOnDevice(yandexSession, newUserName.toLowerCase())) {
                 yandexAliceResponse.getResponse().setText(String.format(

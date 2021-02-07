@@ -666,6 +666,22 @@ public class DictionaryServiceUT {
         verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
     }
 
+    @Test
+    void should_ask_again_for_name_when_state_is_PENDING_NEW_USER_NAME_and_defined_entity_FIO_and_dictionaryDao_return_true_when_calling_checkUserNameExistsOnDevice_with_new_user_name_supplied() {
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("меня зовут василий петрович").with(
+            New.entity("YANDEX.FIO").from(2).to(4).withValue("{\"first_name\": \"василий\", \"patronymic_name\": \"петрович\"}").please()
+        ).please();
+        serviceUser = createServiceUser();
+        session = newSession().withState(PENDING_NEW_USER_NAME).please();
+        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(dictionaryDao.checkUserNameExistsOnDevice(yaRequest.getSession(), "василий петрович")).thenReturn(true);
+
+        yaResponse = sut.talkYandexAlice(yaRequest);
+
+        assertEquals(New.yaResponse("Пользователь с именем Василий Петрович уже есть на вашем устройстве. Назовите другое имя.").please(), yaResponse);
+        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
+    }
+
     private ServiceUser createServiceUser(String name, String userId) {
         return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId);
     }
