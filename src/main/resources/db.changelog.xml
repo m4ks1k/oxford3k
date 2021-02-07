@@ -1,0 +1,225 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.3.xsd">
+
+    <changeSet id="ddl" author="m4ks1k" context="prod">
+        <sql>
+            create table dict.term (
+                ID bigserial not null primary key,
+                TERM varchar(255) not null
+            );
+
+            create table dict.last_suggested_term (
+                ID bigserial not null primary key,
+                TERM_ID bigint not null
+            );
+
+            create table dict.term_reference (
+                ID bigserial not null primary key,
+                TERM_ID bigint not null,
+                TERM_REFERENCE_ID bigint not null
+            );
+        </sql>
+        <rollback>
+            drop table dict.term_reference;
+            drop table dict.last_suggested_term;
+            drop table dict.term;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-session-state" author="m4ks1k" context="prod">
+        <sql>
+            create table dict.session_state (
+            ID bigserial not null primary key,
+            SESSION_ID varchar(255) not null,
+            STATE varchar(255) not null default 'INITIAL'
+            );
+        </sql>
+        <rollback>
+            drop table dict.session_state;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-session-state-add-user-id" author="m4ks1k" context="prod">
+        <sql>
+            alter table dict.session_state
+            add USER_ID varchar(255);
+        </sql>
+        <rollback>
+            alter table dict.session_state drop column USER_ID;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-introduce-user" author="m4ks1k" context="prod">
+        <sql>
+            create table dict.user (
+                ID bigserial not null primary key,
+                USER_NAME varchar(255),
+                EXT_USER_SOURCE varchar(255) not null,
+                EXT_USER_ID varchar(255),
+                EXT_APPLICATION_ID varchar(255) not null
+            );
+        </sql>
+        <rollback>
+            drop table dict.user;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-session-state-remove-user-data" author="m4ks1k" context="prod">
+        <sql>
+            alter table dict.session_state
+            drop column USER_ID;
+            alter table dict.session_state
+            add column SERVICE_USER_ID bigint;
+        </sql>
+        <rollback>
+            alter table dict.session_state
+            add USER_ID varchar(255);
+            alter table dict.session_state
+            drop column SERVICE_USER_ID;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-term-add-language" author="m4ks1k" context="prod">
+        <sql>
+            alter table dict.term
+            add column LANGUAGE varchar(32) not null default 'RUSSIAN';
+        </sql>
+        <rollback>
+            alter table dict.term
+            drop column LANGUAGE;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-introduce-user-dictionary-entry" author="m4ks1k" context="prod">
+        <sql>
+            create table dict.user_dictionary_entry (
+                ID bigserial not null primary key,
+                USER_ID bigint not null,
+                TERM_REFERENCE_ID bigint not null
+            );
+        </sql>
+        <rollback>
+            drop table dict.user_dictionary_entry;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-introduce-pending-word-insert" author="m4ks1k" context="prod">
+        <sql>
+            create table dict.pending_word_insert (
+                SESSION_ID bigint not null primary key,
+                WORD varchar(255) not null,
+                LANGUAGE varchar(32) not null
+            );
+        </sql>
+        <rollback>
+            drop table dict.pending_word_insert;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-term-add-unique" author="m4ks1k" context="prod">
+        <sql>
+            alter table DICT.TERM
+            add constraint TERM_UK unique(TERM, LANGUAGE)
+            ;
+        </sql>
+        <rollback>
+            alter table DICT.TERM drop constraint TERM_UK;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-term-reference-add-unique" author="m4ks1k" context="prod">
+        <sql>
+            alter table DICT.TERM_REFERENCE
+            add constraint TERM_REFERENCE_UK unique(TERM_ID, TERM_REFERENCE_ID)
+            ;
+        </sql>
+        <rollback>
+            alter table DICT.TERM_REFERENCE drop constraint TERM_REFERENCE_UK;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-user-dictionary-entry-add-unique" author="m4ks1k" context="prod">
+        <sql>
+            alter table DICT.USER_DICTIONARY_ENTRY
+            add constraint USER_DICTIONARY_ENTRY_UK unique(USER_ID, TERM_REFERENCE_ID)
+            ;
+        </sql>
+        <rollback>
+            alter table DICT.USER_DICTIONARY_ENTRY drop constraint USER_DICTIONARY_ENTRY_UK;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-drop-pending-word-insert" author="m4ks1k" context="prod">
+        <sql>
+            drop table DICT.PENDING_WORD_INSERT ;
+        </sql>
+        <rollback>
+            create table DICT.PENDING_WORD_INSERT (
+                SESSION_ID bigint not null primary key,
+                WORD varchar(255) not null,
+                LANGUAGE varchar(32) not null
+            );
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-session-state-add-word-language-test-type" author="m4ks1k" context="prod">
+        <sql>
+            alter table DICT.SESSION_STATE
+            add WORD varchar(255) default null;
+            alter table DICT.SESSION_STATE
+            add LANGUAGE varchar(32) default null;
+            alter table DICT.SESSION_STATE
+            add TEST_TYPE varchar(32) default null;
+        </sql>
+        <rollback>
+            alter table DICT.SESSION_STATE
+            drop column WORD;
+            alter table DICT.SESSION_STATE
+            drop column LANGUAGE;
+            alter table DICT.SESSION_STATE
+            drop column TEST_TYPE;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-drop-last-suggested-term" author="m4ks1k" context="prod">
+        <sql>
+            drop table DICT.LAST_SUGGESTED_TERM;
+        </sql>
+        <rollback>
+            create table DICT.LAST_SUGGESTED_TERM (
+                ID bigserial not null primary key,
+                TERM_ID bigint not null
+            );
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-user-dictionary-entry-add-stats" author="m4ks1k" context="prod">
+        <sql>
+            alter table DICT.USER_DICTIONARY_ENTRY
+            add SUCCESS_COUNT integer default 0 not null;
+            alter table DICT.USER_DICTIONARY_ENTRY
+            add TOTAL_COUNT integer default 0 not null;
+        </sql>
+        <rollback>
+            alter table DICT.USER_DICTIONARY_ENTRY
+            drop column SUCCESS_COUNT;
+            alter table DICT.USER_DICTIONARY_ENTRY
+            drop column TOTAL_COUNT;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-session-state-add-test-count" author="m4ks1k" context="prod">
+        <sql>
+            alter table DICT.SESSION_STATE
+            add TEST_TOTAL_COUNT integer default 0;
+            alter table DICT.SESSION_STATE
+            add TEST_SUCCESS_COUNT integer default 0;
+            alter table DICT.SESSION_STATE
+            add TEST_SUCCESS_COUNT_IN_RAW integer default 0;
+        </sql>
+        <rollback>
+            alter table DICT.SESSION_STATE
+            drop column TEST_TOTAL_COUNT;
+            alter table DICT.SESSION_STATE
+            drop column TEST_SUCCESS_COUNT;
+            alter table DICT.SESSION_STATE
+            drop column TEST_SUCCESS_COUNT_IN_RAW;
+        </rollback>
+    </changeSet>
+    <changeSet id="ddl-session-state-add-test-dictionary" author="m4ks1k" context="prod">
+        <sql>
+            alter table DICT.SESSION_STATE
+            add TEST_DICTIONARY varchar(32);
+        </sql>
+        <rollback>
+            alter table DICT.SESSION_STATE
+            drop column TEST_DICTIONARY;
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

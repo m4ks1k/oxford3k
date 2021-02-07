@@ -1,0 +1,68 @@
+spring.profiles.active: qa
+---
+server:
+    port: 8080
+    tomcat:
+        mbeanregistry.enabled: true
+        maxThreads: 100
+httpPool:
+    maxTotal: 100
+    defaultMaxPerRoute: 10
+    connectTimeout: 5000
+    connectionRequestTimeout: 1000
+    socketTimeout: 65000
+    validateAfterInactivity: 2000
+
+spring.config.activate.on-profile: test, qa, it
+spring:
+    main.lazy-initialization: true
+    datasource:
+        driverClassName: org.h2.Driver
+        url: jdbc:h2:mem:dict-db;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;INIT=CREATE SCHEMA IF NOT EXISTS liquibase\;CREATE SCHEMA IF NOT EXISTS dict;
+        username: sa
+        password:
+        hikari:
+            poolName: hikari-connection-pool
+            maximumPoolSize: 2
+            minimumIdle: 1
+    jpa:
+        show-sql: true
+        hibernate.ddl-auto: validate
+    liquibase:
+        enabled: true
+        contexts: prod, qa
+        change-log: classpath:db.changelog.xml
+        liquibaseSchema: liquibase
+        default-schema: dict
+        user: sa
+        password:
+
+---
+spring.config.activate.on-profile: preview, prod
+spring:
+    datasource:
+        driverClassName: org.postgresql.Driver
+        url: ${SPRING_DATASOURCE_URL}
+        username: ${SPRING_DATASOURCE_USERNAME}
+        password: ${SPRING_DATASOURCE_PASSWORD}
+        initialization-mode: always
+        hikari:
+            poolName: hikari-connection-pool
+            maximumPoolSize: 10
+            minimumIdle: 2
+            idleTimeout: 600000
+            maxLifetime: 1200000
+    jpa:
+        hibernate.ddl-auto: validate
+        open-in-view: false
+    liquibase:
+        enabled: true
+        contexts: prod
+        change-log: classpath:db.changelog.xml
+        liquibaseSchema: liquibase
+        default-schema: dict
+        user: ${SPRING_DATASOURCE_USERNAME}
+        password: ${SPRING_DATASOURCE_PASSWORD}
+---
+spring.config.activate.on-profile: preview
+spring.jpa.show-sql: true
