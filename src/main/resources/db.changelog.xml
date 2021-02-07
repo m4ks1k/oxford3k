@@ -222,4 +222,14 @@
             drop column TEST_DICTIONARY;
         </rollback>
     </changeSet>
+    <changeSet id="ddl-user-add-last-used" author="m4ks1k" context="prod">
+        <sql>
+            alter table DICT.USER
+            add LAST_USED char(1) not null default 'Y';
+        </sql>
+        <rollback>
+            alter table DICT.USER
+            drop column LAST_USED;
+        </rollback>
+    </changeSet>
 </databaseChangeLog>

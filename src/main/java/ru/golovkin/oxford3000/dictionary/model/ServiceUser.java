@@ -46,4 +46,8 @@ public class ServiceUser {
 
     @Column(columnDefinition = "varchar(255)", name = "EXT_APPLICATION_ID")
     String extAppId;
+
+    @NonNull
+    @Column(columnDefinition = "char(1)", name = "LAST_USED", nullable = false)
+    String lastUsed;
 }

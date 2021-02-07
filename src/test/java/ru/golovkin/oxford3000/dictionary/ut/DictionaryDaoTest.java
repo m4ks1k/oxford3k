@@ -245,7 +245,7 @@ public class DictionaryDaoTest {
     }
 
     private ServiceUser createDefaultUser(String name, String userId, String appId) {
-        return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId);
+        return createDefaultUser(name, userId, appId, true);
     }
 
     private ServiceUser createDefaultUser() {
@@ -711,5 +711,39 @@ public class DictionaryDaoTest {
         ServiceUser newServiceUser = sut.addNewUser(New.yaRequest(appId).withUserId(userId).please().getSession(), "Василий Петрович");
 
         assertEquals(createDefaultUser("Василий Петрович", userId, appId), newServiceUser);
+    }
+
+    @Test
+    @Transactional
+    void should_return_session_with_state_PENDING_NEW_TERM_and_linked_user_with_last_used_flag_set_when_calling_getSessionState_and_exists_two_users_with_appId_and_empty_user_id() {
+        serviceUser = createDefaultUser("петя", null, appId);
+        ServiceUser anotherServiceUser = createDefaultUser("коля", null, appId, false);
+        entityManager.persist(serviceUser);
+        entityManager.persist(anotherServiceUser);
+
+        Session state = sut.getSessionState(New.yaRequest(appId).withSessionId(sessionId).please().getSession());
+
+        assertEquals(serviceUser, state.getServiceUser());
+        entityManager.refresh(anotherServiceUser);
+        assertEquals("N", anotherServiceUser.getLastUsed());
+    }
+
+    @Test
+    @Transactional
+    void should_return_session_with_state_PENDING_NEW_TERM_and_linked_user_with_last_used_flag_set_when_calling_getSessionState_and_exists_two_users_with_appId_and_user_id() {
+        serviceUser = createDefaultUser("петя", userId, appId);
+        ServiceUser anotherServiceUser = createDefaultUser("коля", userId, appId, false);
+        entityManager.persist(serviceUser);
+        entityManager.persist(anotherServiceUser);
+
+        Session state = sut.getSessionState(New.yaRequest(appId).withUserId(userId).withSessionId(sessionId).please().getSession());
+
+        assertEquals(serviceUser, state.getServiceUser());
+        entityManager.refresh(anotherServiceUser);
+        assertEquals("N", anotherServiceUser.getLastUsed());
+    }
+
+    private ServiceUser createDefaultUser(String name, String userId, String appId, boolean isLastUsed) {
+        return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId, isLastUsed?"Y":"N");
     }
 }

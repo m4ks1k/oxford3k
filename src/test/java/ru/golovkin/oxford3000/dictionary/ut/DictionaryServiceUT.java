@@ -174,7 +174,7 @@ public class DictionaryServiceUT {
     @Test
     void should_ask_for_translation_and_set_state_PENDING_ENG_TRANSLATION_when_state_PENDING_NEW_TERM_and_command_starts_with_add_russian_word_and_no_such_word_nor_in_user_dictionary_neither_in_global_dictionary() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь русское слово кошка").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("кошка", Language.RUSSIAN)).thenReturn(false);
@@ -190,7 +190,7 @@ public class DictionaryServiceUT {
     @Test
     void should_tell_refine_request_and_set_state_PENDING_ENG_TRANSLATION_when_state_PENDING_NEW_TERM_and_command_starts_with_add_russian_word() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь русское слово").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
@@ -202,7 +202,7 @@ public class DictionaryServiceUT {
     @Test
     void should_tell_refine_request_and_set_state_PENDING_ENG_TRANSLATION_when_state_PENDING_NEW_TERM_and_command_starts_with_add_english_word() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь английское слово").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
@@ -214,7 +214,7 @@ public class DictionaryServiceUT {
     @Test
     void should_respond_that_word_already_exists_in_user_dictionary_when_state_PENDING_NEW_TERM_and_command_starts_with_add_russian_word_and_word_exists_in_user_dictionary() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь русское слово кошка").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("кошка", Language.RUSSIAN)).thenReturn(false);
@@ -228,7 +228,7 @@ public class DictionaryServiceUT {
     @Test
     void should_respond_that_word_already_exists_in_user_dictionary_when_state_PENDING_NEW_TERM_and_command_starts_with_add_english_word_and_word_exists_in_user_dictionary() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь английское слово cat").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("cat", Language.ENGLISH)).thenReturn(false);
@@ -242,7 +242,7 @@ public class DictionaryServiceUT {
     @Test
     void should_respond_that_word_is_known_and_call_addWordFromGlobalToUserDictionary_when_state_PENDING_NEW_TERM_and_command_starts_with_add_english_word_and_word_exists_in_global_dictionary() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь английское слово cat").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("cat", Language.ENGLISH)).thenReturn(true);
@@ -261,7 +261,7 @@ public class DictionaryServiceUT {
     @Test
     void should_respond_that_word_is_known_and_call_addWordFromGlobalToUserDictionary_when_state_PENDING_NEW_TERM_and_command_starts_with_add_russian_word_and_word_exists_in_global_dictionary() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь русское слово кошка").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("кошка", Language.RUSSIAN)).thenReturn(true);
@@ -279,7 +279,7 @@ public class DictionaryServiceUT {
     @Test
     void should_call_addTermWithTranslationInDictionary_with_source_term_language_RUSSIAN_and_set_state_PENDING_NEW_TERM_when_command_is_non_empty_and_session_state_PENDING_ENG_TRANSLATION_and_getPendingWordInsert_returns_russian_word() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("cat").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_ENG_TRANSLATION).withWord("кошка").withLanguage(Language.RUSSIAN).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
@@ -293,7 +293,7 @@ public class DictionaryServiceUT {
     @Test
     void should_ask_for_translation_and_set_state_PENDING_RUS_TRANSLATION_when_state_PENDING_NEW_TERM_and_command_starts_with_add_englsh_word_and_no_such_word_nor_in_user_dictionary_neither_in_global_dictionary() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("добавь английское слово cat").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("cat", Language.ENGLISH)).thenReturn(false);
@@ -309,7 +309,7 @@ public class DictionaryServiceUT {
     @Test
     void should_call_addTermWithTranslationInDictionary_with_source_term_language_ENGLIGH_and_set_state_PENDING_NEW_TERM_when_command_is_non_empty_and_session_state_PENDING_RUS_TRANSLATION_and_getPendingWordInsert_returns_english_word() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("кошка").please();
-        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId);
+        serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_RUS_TRANSLATION).withWord("cat").withLanguage(Language.ENGLISH).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
@@ -703,7 +703,7 @@ public class DictionaryServiceUT {
     }
 
     private ServiceUser createServiceUser(String name, String userId) {
-        return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId);
+        return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId, "Y");
     }
 
     private ServiceUser createServiceUser(String name) {

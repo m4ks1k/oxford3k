@@ -9,7 +9,6 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.User;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -50,7 +49,7 @@ public class DictionaryDao {
 
     private ServiceUser getServiceUser(UserSource userSource, String userId, String applicationId) {
         TypedQuery<ServiceUser> serviceUserTypedQuery = entityManager.createQuery(
-            "select u from ServiceUser u where u.userSource = :userSource and u.extUserId = :extUserId ", ServiceUser.class);
+            "select u from ServiceUser u where u.userSource = :userSource and u.extUserId = :extUserId and u.lastUsed = 'Y'", ServiceUser.class);
         serviceUserTypedQuery.setParameter("userSource", userSource);
         serviceUserTypedQuery.setParameter("extUserId", userId);
         try {
@@ -60,7 +59,7 @@ public class DictionaryDao {
         }
 
         serviceUserTypedQuery = entityManager.createQuery(
-            "select u from ServiceUser u where u.userSource = :userSource and u.extUserId is null and u.extAppId = :extAppId", ServiceUser.class);
+            "select u from ServiceUser u where u.userSource = :userSource and u.extUserId is null and u.extAppId = :extAppId and u.lastUsed = 'Y'", ServiceUser.class);
         serviceUserTypedQuery.setParameter("userSource", userSource);
         serviceUserTypedQuery.setParameter("extAppId", applicationId);
         try {
@@ -68,7 +67,7 @@ public class DictionaryDao {
         } catch (NoResultException e) {
             log.info("No user for appId {}, returning default object", applicationId);
         }
-        return new ServiceUser(null, null, userSource, userId, applicationId);
+        return new ServiceUser(null, null, userSource, userId, applicationId, "Y");
     }
 
     @Transactional
@@ -312,10 +311,24 @@ public class DictionaryDao {
     }
 
     public ServiceUser addNewUser(YASession session, String userName) {
+        String extUserId =
+            session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId()) ?
+                session.getUser().getUserId().trim() : null;
         ServiceUser user = new ServiceUser(null, userName, UserSource.YANDEX_ALICE,
-            session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())?
-            session.getUser().getUserId().trim():null, session.getApplication().getApplicationId());
+            extUserId, session.getApplication().getApplicationId(), "Y");
         entityManager.persist(user);
+
+        Query userUpdateQuery = entityManager.createQuery("update ServiceUser u set u.lastUsed = 'N' "
+            + " where u.extAppId = :extAppId "
+            + " and u.extUserId " + (extUserId == null? "is null":" = :extUserId ")
+            + " and u.id <> :id ");
+        userUpdateQuery.setParameter("extAppId", session.getApplication().getApplicationId());
+        if (extUserId != null) {
+            userUpdateQuery.setParameter("extUserId", extUserId);
+        }
+        userUpdateQuery.setParameter("id", user.getId());
+        userUpdateQuery.executeUpdate();
+
         return user;
     }
 }
