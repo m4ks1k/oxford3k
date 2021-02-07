@@ -168,18 +168,6 @@ public class DictionaryDao {
         Random random = new Random();
         TermReference termReference;
         if (TestDictionary.USER.equals(testDictionary)) {
-            TypedQuery<Integer> minimumTotalCount =
-                entityManager.createQuery(
-                    "select coalesce(min(e.totalCount), 0) "
-                        + "from UserDictionaryEntry e "
-                        + "join e.termReference r "
-                        + "join r.term t "
-                        + "join r.termReference tr "
-                        + "where e.user = :user",
-                    Integer.class);
-            minimumTotalCount.setParameter("user", serviceUser);
-            int minimumTotal = minimumTotalCount.getSingleResult();
-            log.debug("minimumTotal for {} is {}", serviceUser.getId(), minimumTotal);
 
             TypedQuery<UserDictionaryEntry> query =
                 entityManager.createQuery(
@@ -188,11 +176,9 @@ public class DictionaryDao {
                         + "join fetch e.termReference r "
                         + "join fetch r.term t "
                         + "join fetch r.termReference tr "
-                        + "where e.user = :user "
-                        + "and e.totalCount = :minTotal ",
+                        + "where e.user = :user ",
                     UserDictionaryEntry.class);
             query.setParameter("user", serviceUser);
-            query.setParameter("minTotal", minimumTotal);
             List<UserDictionaryEntry> entries = query.getResultList();
             if (entries.isEmpty()) {
                 return null;

@@ -464,7 +464,7 @@ public class DictionaryDaoTest {
 
     @Test
     @Transactional
-    void should_return_russian_term_with_total_count_equal_to_minimum_in_user_dictionary_when_calling_getNextRandomTermToTest_with_test_type_RUSSIAN_and_test_dictionary_user() {
+    void should_return_one_of_russian_terms_when_calling_getNextRandomTermToTest_with_test_type_RUSSIAN_and_test_dictionary_user() {
         serviceUser = createDefaultUser();
         entityManager.persist(serviceUser);
         Term russianTerm1 = new Term(null, russianWord, Language.RUSSIAN);
@@ -486,7 +486,7 @@ public class DictionaryDaoTest {
 
         Term randomTerm = sut.getNextRandomTermToTest(serviceUser, TestType.RUSSIAN, TestDictionary.USER);
 
-        assertThat(randomTerm).isEqualTo(russianTerm1);
+        assertThat(randomTerm).isIn(russianTerm1, russianTerm2);
     }
 
     @Test
