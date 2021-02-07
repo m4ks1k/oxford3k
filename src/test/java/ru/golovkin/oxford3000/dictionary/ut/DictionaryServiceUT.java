@@ -31,6 +31,7 @@ import ru.golovkin.oxford3000.dictionary.model.Language;
 import ru.golovkin.oxford3000.dictionary.model.ServiceUser;
 import ru.golovkin.oxford3000.dictionary.model.Session;
 import ru.golovkin.oxford3000.dictionary.model.SessionBuilder;
+import ru.golovkin.oxford3000.dictionary.model.SessionState;
 import ru.golovkin.oxford3000.dictionary.model.Term;
 import ru.golovkin.oxford3000.dictionary.model.TestDictionary;
 import ru.golovkin.oxford3000.dictionary.model.TestObjectBuilder;
@@ -612,6 +613,7 @@ public class DictionaryServiceUT {
             .withTestCount(11).withSuccessTestCount(6).withSuccessTestCountInRaw(10).please());
         verify(dictionaryDao, atLeastOnce()).updateTestResult(serviceUser, "кошка", Language.RUSSIAN, DictionaryService.SUCCESS);
     }
+
     @Test
     void should_answer_with_failure_tell_correct_response_and_offer_to_test_another_word_and_set_state_PENDING_TEST_RESPONSE_when_state_PENDING_TEST_RESPONSE_and_word_with_language_in_session_and_user_utterance_not_matches_and_of_translations_returned_by_findTranslations() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("dog").please();
@@ -635,6 +637,20 @@ public class DictionaryServiceUT {
             .withTestCount(11).withSuccessTestCount(5).withSuccessTestCountInRaw(0).please());
         verify(dictionaryDao, atLeastOnce()).updateTestResult(serviceUser, "кошка", Language.RUSSIAN, DictionaryService.FAIL);
     }
+
+    @Test
+    void should_ask_for_name_when_state_is_PENDING_TERM_and_user_ask_to_add_new_user() {
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("добавь пользователя").please();
+        serviceUser = createServiceUser();
+        session = newSession().withState(PENDING_NEW_TERM).please();
+        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+
+        yaResponse = sut.talkYandexAlice(yaRequest);
+
+        assertEquals(New.yaResponse("Как зовут нового пользователя?").please(), yaResponse);
+        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
+    }
+
     private ServiceUser createServiceUser(String name, String userId) {
         return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId);
     }

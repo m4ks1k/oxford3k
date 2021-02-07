@@ -198,6 +198,13 @@ public class DictionaryService {
                 session.setState(SessionState.PENDING_TEST_DICTIONARY);
                 dictiondaryDao.updateSessionState(session);
             }
+        } else if (session.getState() == SessionState.PENDING_NEW_TERM && commandDefined(skillRequest) &&
+            skillRequest.getNlu() != null && tokensContain(skillRequest.getNlu().getTokens(), "добавь", "пользователя") >= 0) {
+
+            yandexAliceResponse.getResponse().setText(
+                "Как зовут нового пользователя?");
+            session.setState(SessionState.PENDING_NEW_USER_NAME);
+            dictiondaryDao.updateSessionState(session);
         } else if (session.getState() == SessionState.PENDING_TEST_DICTIONARY && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null) {
             if (tokensContain(skillRequest.getNlu().getTokens(), "общего") >= 0) {
