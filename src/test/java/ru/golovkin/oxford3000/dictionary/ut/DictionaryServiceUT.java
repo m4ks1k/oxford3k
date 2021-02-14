@@ -702,6 +702,19 @@ public class DictionaryServiceUT {
         verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
     }
 
+    @Test
+    void should_ask_for_name_and_set_state_PENDING_USER_NAME_FOR_SWITCH_when_state_is_PENDING_TERM_and_user_ask_to_switch_user() {
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("переключи пользователя").please();
+        serviceUser = createServiceUser();
+        session = newSession().withState(PENDING_NEW_TERM).please();
+        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+
+        yaResponse = sut.talkYandexAlice(yaRequest);
+
+        assertEquals(New.yaResponse("Назовите имя пользователя.").please(), yaResponse);
+        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_USER_NAME_TO_SWITCH).please());
+    }
+
     private ServiceUser createServiceUser(String name, String userId) {
         return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId, "Y");
     }

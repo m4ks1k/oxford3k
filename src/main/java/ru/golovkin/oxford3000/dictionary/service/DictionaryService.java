@@ -231,7 +231,14 @@ public class DictionaryService {
                     "Пользователь %1$s добавлен на ваше устройство.", capitalize(newUserName)
                 ));
             }
+        } else if (session.getState() == SessionState.PENDING_NEW_TERM && commandDefined(skillRequest) &&
+            skillRequest.getNlu() != null && (
+                tokensContain(skillRequest.getNlu().getTokens(), "переключи", "пользователя") >= 0 ||
+                tokensContain(skillRequest.getNlu().getTokens(), "переключите", "пользователя") >= 0)) {
 
+            yandexAliceResponse.getResponse().setText("Назовите имя пользователя.");
+            session.setState(SessionState.PENDING_USER_NAME_TO_SWITCH);
+            dictiondaryDao.updateSessionState(session);
         } else if (session.getState() == SessionState.PENDING_TEST_DICTIONARY && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null) {
             if (tokensContain(skillRequest.getNlu().getTokens(), "общего") >= 0) {
