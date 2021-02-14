@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
-import org.springframework.util.StringUtils;
 import ru.golovkin.oxford3000.dictionary.model.Language;
 import ru.golovkin.oxford3000.dictionary.model.ServiceUser;
 import ru.golovkin.oxford3000.dictionary.model.Session;
@@ -349,7 +348,23 @@ public class DictionaryDao {
     }
 
     public ServiceUser getDeviceUserByName(YASession session, String name) {
-        return null;
+        TypedQuery<ServiceUser> query = entityManager.createQuery("select u "
+            + " from ServiceUser u "
+            + " where lower(u.name) = :name and "
+            + (session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())?
+            " u.extUserId = :userId ":
+            " u.extAppId = :appId and u.extUserId is null "), ServiceUser.class);
+        query.setParameter("name", name.toLowerCase());
+        if (session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())) {
+            query.setParameter("userId", session.getUser().getUserId());
+        } else {
+            query.setParameter("appId", session.getApplication().getApplicationId());
+        }
+        try {
+            return query.getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
     }
 
     public List<ServiceUser> getDeviceUsers(YASession session) {

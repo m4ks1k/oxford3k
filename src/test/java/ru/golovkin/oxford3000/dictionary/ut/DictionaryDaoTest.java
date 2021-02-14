@@ -3,6 +3,7 @@ package ru.golovkin.oxford3000.dictionary.ut;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
@@ -785,6 +786,49 @@ public class DictionaryDaoTest {
         entityManager.persist(anotherServiceUser);
 
         assertEquals(2, sut.getDeviceUserCount(New.yaRequest(appId).withUserId(userId).withSessionId(sessionId).please().getSession()));
+    }
+
+    @Test
+    @Transactional
+    void should_return_user_by_name_and_appId_when_calling_getDeviceUserByName_and_userId_from_session_is_empty() {
+        ServiceUser userToReturn = createDefaultUser("петя", null, appId);
+        entityManager.persist(userToReturn);
+        entityManager.persist(createDefaultUser("петя", userId, appId));
+        entityManager.persist(createDefaultUser("коля", null, appId));
+
+        assertEquals(userToReturn, sut.getDeviceUserByName(New.yaRequest(appId).withSessionId(sessionId).please().getSession(), "петя"));
+    }
+
+    @Test
+    @Transactional
+    void should_return_null_when_calling_getDeviceUserByName_and_userId_from_session_is_empty_and_no_records_in_table_user_with_such_name_and_appId() {
+        entityManager.persist(createDefaultUser("петя", userId, appId));
+        entityManager.persist(createDefaultUser("петя", null, appId + "1"));
+        entityManager.persist(createDefaultUser("коля", null, appId));
+
+        assertNull(sut.getDeviceUserByName(New.yaRequest(appId).withSessionId(sessionId).please().getSession(), "петя"));
+    }
+
+    @Test
+    @Transactional
+    void should_return_user_by_name_and_userId_when_calling_getDeviceUserByName_and_userId_from_session_is_not_empty() {
+        ServiceUser userToReturn = createDefaultUser("петя", userId, appId + "1");
+        entityManager.persist(userToReturn);
+        entityManager.persist(createDefaultUser("петя", userId + "1", appId));
+        entityManager.persist(createDefaultUser("петя", null, appId));
+        entityManager.persist(createDefaultUser("коля", userId, appId));
+
+        assertEquals(userToReturn, sut.getDeviceUserByName(New.yaRequest(appId).withUserId(userId).withSessionId(sessionId).please().getSession(), "петя"));
+    }
+
+    @Test
+    @Transactional
+    void should_return_null_when_calling_getDeviceUserByName_and_userId_from_session_is_not_empty_and_no_records_in_table_user_with_such_name_and_appId() {
+        entityManager.persist(createDefaultUser("петя", null, appId));
+        entityManager.persist(createDefaultUser("петя", userId + "1", appId));
+        entityManager.persist(createDefaultUser("коля", userId, appId));
+
+        assertNull(sut.getDeviceUserByName(New.yaRequest(appId).withUserId(userId).withSessionId(sessionId).please().getSession(), "петя"));
     }
 
     private ServiceUser createDefaultUser(String name, String userId, String appId, boolean isLastUsed) {
