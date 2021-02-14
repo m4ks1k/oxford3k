@@ -748,13 +748,13 @@ public class DictionaryServiceUT {
 
     @Test
     void should_ask_for_another_name_and_enumerate_device_users_from_getDeviceUsers_when_state_is_PENDING_USER_NAME_FOR_SWITCH_and_FIO_defined_but_getDeviceUserByName_returned_null() {
-        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("коля").with(
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("меня зовут василий петрович").with(
             New.entity("YANDEX.FIO").from(2).to(4).withValue("{\"first_name\": \"василий\", \"patronymic_name\": \"петрович\"}").please()
         ).please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_USER_NAME_TO_SWITCH).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
-        when(dictionaryDao.getDeviceUserByName(yaRequest.getSession(), "коля")).thenReturn(null);
+        when(dictionaryDao.getDeviceUserByName(yaRequest.getSession(), "василий петрович")).thenReturn(null);
         when(dictionaryDao.getDeviceUsers(yaRequest.getSession())).thenReturn(
             Arrays.asList(serviceUser, createServiceUser("Петя", userId), createServiceUser("антонина воротынская", userId))
         );
@@ -764,6 +764,23 @@ public class DictionaryServiceUT {
         assertEquals(New.yaResponse("Максим, я не знаю пользователя Василий Петрович на вашем устройстве. Кроме вас зарегистрированы Петя, Антонина Воротынская.").please(), yaResponse);
     }
 
+    @Test
+    void should_set_session_user_to_service_user_from_getDeviceUserByName_set_state_to_PENDING_NEW_TERM_and_greet_user_when_state_is_PENDING_USER_NAME_FOR_SWITCH_and_user_called_name_and_getDeviceUserByName_returned_not_null_service_user() {
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("коля").please();
+        serviceUser = createServiceUser();
+        ServiceUser newUser = createServiceUser("коля", userId);
+        session = newSession().withState(PENDING_USER_NAME_TO_SWITCH).please();
+        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(dictionaryDao.getDeviceUserByName(yaRequest.getSession(), "коля")).thenReturn(newUser);
+        when(dictionaryDao.getDictionarySize(newUser)).thenReturn(10L);
+
+        yaResponse = sut.talkYandexAlice(yaRequest);
+
+        assertEquals(New.yaResponse("Рада снова слышать вас, Коля!"
+            + " В вашем словаре 10 слов. Добавим ещё или будем проверять?").please(), yaResponse);
+        verify(dictionaryDao, atLeastOnce()).updateSessionState(New.session(sessionId).withState(PENDING_NEW_TERM).withUser(newUser)
+            .withSuccessTestCount(0).withTestCount(0).withSuccessTestCountInRaw(0).please());
+    }
     private ServiceUser createServiceUser(String name, String userId) {
         return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId, "Y");
     }

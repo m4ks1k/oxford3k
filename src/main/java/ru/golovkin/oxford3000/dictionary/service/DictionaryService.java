@@ -252,7 +252,8 @@ public class DictionaryService {
                 userName = userNameFromNLU;
             }
 
-            if (dictiondaryDao.getDeviceUserByName(yandexSession, userName) == null) {
+            ServiceUser switchedUser;
+            if ((switchedUser = dictiondaryDao.getDeviceUserByName(yandexSession, userName)) == null) {
                 String capitalizedName = capitalize(userName);
                 String capitalizedCurrentUser = capitalize(session.getServiceUser().getName());
                 List<ServiceUser> deviceUsers = dictiondaryDao.getDeviceUsers(yandexSession);
@@ -264,6 +265,22 @@ public class DictionaryService {
                     "%1$s, я не знаю пользователя %2$s на вашем устройстве. Кроме вас зарегистрирован%4$s %3$s.",
                     capitalizedCurrentUser, capitalizedName, capitalizedOtherDeviceUsers, deviceUsers.size() > 2?"ы":" только"
                 ));
+            } else {
+                long wordCount = dictiondaryDao.getDictionarySize(switchedUser);
+                yandexAliceResponse.getResponse().setText(String.format(
+                    "Рада снова слышать вас, %1$s! "
+                        + "В вашем словаре %2$s. Добавим ещё или будем проверять?",
+                    capitalize(switchedUser.getName()),
+                    wordCount > 0? RussianDeclensionUtil.inclineWithNumeral(wordCount,  Gender.NEUTER, "слово", "слова", "слов"): "пусто"
+                ));
+                switchedUser.setLastUsed("Y");
+                session.setServiceUser(switchedUser);
+                session.setState(SessionState.PENDING_NEW_TERM);
+                session.setSuccessTestCount(0);
+                session.setSuccessTestCountInRaw(0);
+                session.setTestCount(0);
+                //TODO update other users as not last used
+                dictiondaryDao.updateSessionState(session);
             }
         } else if (session.getState() == SessionState.PENDING_TEST_DICTIONARY && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null) {
