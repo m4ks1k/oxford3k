@@ -1,5 +1,6 @@
 package ru.golovkin.oxford3000.dictionary.dao;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -368,6 +369,19 @@ public class DictionaryDao {
     }
 
     public List<ServiceUser> getDeviceUsers(YASession session) {
-        return null;
+        TypedQuery<ServiceUser> query = entityManager.createQuery("select u "
+            + " from ServiceUser u "
+            + " where "
+            + (session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())?
+            " u.extUserId = :userId ":
+            " u.extAppId = :appId and u.extUserId is null "
+            )
+            + " order by u.name", ServiceUser.class);
+        if (session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())) {
+            query.setParameter("userId", session.getUser().getUserId());
+        } else {
+            query.setParameter("appId", session.getApplication().getApplicationId());
+        }
+        return query.getResultList();
     }
 }

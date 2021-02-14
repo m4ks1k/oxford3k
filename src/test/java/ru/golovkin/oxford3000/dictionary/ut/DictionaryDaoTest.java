@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import javax.persistence.EntityManager;
@@ -829,6 +830,50 @@ public class DictionaryDaoTest {
         entityManager.persist(createDefaultUser("коля", userId, appId));
 
         assertNull(sut.getDeviceUserByName(New.yaRequest(appId).withUserId(userId).withSessionId(sessionId).please().getSession(), "петя"));
+    }
+
+    @Test
+    @Transactional
+    void should_return_empty_list_when_calling_getDeviceUsers_for_session_with_empty_userId_and_no_record_for_such_appId_in_table_users() {
+        entityManager.persist(createDefaultUser("вася", null, appId + "1"));
+        entityManager.persist(createDefaultUser("петя", userId, appId));
+
+        assertEquals(Collections.emptyList(), sut.getDeviceUsers(New.yaRequest(appId).withSessionId(sessionId).please().getSession()));
+    }
+
+    @Test
+    @Transactional
+    void should_return_empty_list_when_calling_getDeviceUsers_for_session_with_non_empty_userId_and_no_record_for_such_userId_in_table_users() {
+        entityManager.persist(createDefaultUser("вася", userId + "1", appId));
+        entityManager.persist(createDefaultUser("петя", null, appId));
+
+        assertEquals(Collections.emptyList(), sut.getDeviceUsers(New.yaRequest(appId).withUserId(userId).withSessionId(sessionId).please().getSession()));
+    }
+
+    @Test
+    @Transactional
+    void should_return_list_of_two_users_when_calling_getDeviceUsers_for_session_with_non_empty_userId_and_2_records_exist_for_such_userId_in_table_users() {
+        entityManager.persist(createDefaultUser("вася", userId + "1", appId));
+        entityManager.persist(createDefaultUser("петя", null, appId));
+        ServiceUser user1 = createDefaultUser("коля", userId, appId);
+        entityManager.persist(user1);
+        ServiceUser user2 = createDefaultUser("гена", userId, appId + "1");
+        entityManager.persist(user2);
+
+        assertEquals(Arrays.asList(user2, user1), sut.getDeviceUsers(New.yaRequest(appId).withUserId(userId).withSessionId(sessionId).please().getSession()));
+    }
+
+    @Test
+    @Transactional
+    void should_return_list_of_two_users_when_calling_getDeviceUsers_for_session_with_empty_userId_and_2_records_exist_for_such_appId_in_table_users() {
+        entityManager.persist(createDefaultUser("вася", userId, appId));
+        entityManager.persist(createDefaultUser("петя", null, appId + "1"));
+        ServiceUser user1 = createDefaultUser("коля", null, appId);
+        entityManager.persist(user1);
+        ServiceUser user2 = createDefaultUser("гена", null, appId);
+        entityManager.persist(user2);
+
+        assertEquals(Arrays.asList(user2, user1), sut.getDeviceUsers(New.yaRequest(appId).withSessionId(sessionId).please().getSession()));
     }
 
     private ServiceUser createDefaultUser(String name, String userId, String appId, boolean isLastUsed) {
