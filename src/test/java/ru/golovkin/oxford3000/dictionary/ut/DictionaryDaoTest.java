@@ -743,6 +743,15 @@ public class DictionaryDaoTest {
         assertEquals("N", anotherServiceUser.getLastUsed());
     }
 
+    @Test
+    @Transactional
+    void should_return_1_when_calling_getDeviceUserCount_and_only_one_user_exists_with_same_appId_and_empty_userId() {
+        serviceUser = createDefaultUser("коля", null, appId);
+        entityManager.persist(serviceUser);
+
+        assertEquals(1, sut.getDeviceUserCount(New.yaRequest(appId).withSessionId(sessionId).please().getSession()));
+    }
+
     private ServiceUser createDefaultUser(String name, String userId, String appId, boolean isLastUsed) {
         return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId, isLastUsed?"Y":"N");
     }

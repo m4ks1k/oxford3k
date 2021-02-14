@@ -333,6 +333,11 @@ public class DictionaryDao {
     }
 
     public int getDeviceUserCount(YASession session) {
-        return 0;
+        TypedQuery<Integer> query = entityManager.createQuery("select cast(count(1) as integer) "
+            + " from ServiceUser u "
+            + " where extAppId = :appId "
+            +   " and extUserId is null ", Integer.class);
+        query.setParameter("appId", session.getApplication().getApplicationId());
+        return query.getSingleResult();
     }
 }
