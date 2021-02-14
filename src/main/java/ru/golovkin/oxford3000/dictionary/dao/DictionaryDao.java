@@ -331,4 +331,8 @@ public class DictionaryDao {
 
         return user;
     }
+
+    public int getDeviceUserCount(YASession session) {
+        return 0;
+    }
 }

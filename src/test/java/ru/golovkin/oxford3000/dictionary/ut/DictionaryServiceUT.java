@@ -703,16 +703,30 @@ public class DictionaryServiceUT {
     }
 
     @Test
-    void should_ask_for_name_and_set_state_PENDING_USER_NAME_FOR_SWITCH_when_state_is_PENDING_TERM_and_user_ask_to_switch_user() {
+    void should_ask_for_name_and_set_state_PENDING_USER_NAME_FOR_SWITCH_when_state_is_PENDING_TERM_and_user_ask_to_switch_user_and_getDeviceUserCount_returns_2() {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("переключи пользователя").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
         when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(dictionaryDao.getDeviceUserCount(yaRequest.getSession())).thenReturn(2);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Назовите имя пользователя.").please(), yaResponse);
         verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_USER_NAME_TO_SWITCH).please());
+    }
+
+    @Test
+    void should_say_about_only_one_user_on_device_when_state_is_PENDING_TERM_and_user_ask_to_switch_user_and_getDeviceUserCount_returns_1() {
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("переключи пользователя").please();
+        serviceUser = createServiceUser();
+        session = newSession().withState(PENDING_NEW_TERM).please();
+        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(dictionaryDao.getDeviceUserCount(yaRequest.getSession())).thenReturn(1);
+
+        yaResponse = sut.talkYandexAlice(yaRequest);
+
+        assertEquals(New.yaResponse("На этом устройстве всего один пользователь. Если вы хотите создать нового, скажите \"добавь пользователя\".").please(), yaResponse);
     }
 
     private ServiceUser createServiceUser(String name, String userId) {

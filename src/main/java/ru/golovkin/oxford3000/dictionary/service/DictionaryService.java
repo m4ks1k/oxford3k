@@ -8,7 +8,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
-import liquibase.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -234,11 +233,18 @@ public class DictionaryService {
         } else if (session.getState() == SessionState.PENDING_NEW_TERM && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null && (
                 tokensContain(skillRequest.getNlu().getTokens(), "переключи", "пользователя") >= 0 ||
-                tokensContain(skillRequest.getNlu().getTokens(), "переключите", "пользователя") >= 0)) {
-
-            yandexAliceResponse.getResponse().setText("Назовите имя пользователя.");
-            session.setState(SessionState.PENDING_USER_NAME_TO_SWITCH);
-            dictiondaryDao.updateSessionState(session);
+                tokensContain(skillRequest.getNlu().getTokens(), "переключите", "пользователя") >= 0 ||
+                tokensContain(skillRequest.getNlu().getTokens(), "смени", "пользователя") >= 0 ||
+                tokensContain(skillRequest.getNlu().getTokens(), "смените", "пользователя") >= 0 ||
+                tokensContain(skillRequest.getNlu().getTokens(), "поменяй", "пользователя") >= 0 ||
+                tokensContain(skillRequest.getNlu().getTokens(), "поменяйте", "пользователя") >= 0)) {
+            if (dictiondaryDao.getDeviceUserCount(yandexSession) < 2) {
+                yandexAliceResponse.getResponse().setText("На этом устройстве всего один пользователь. Если вы хотите создать нового, скажите \"добавь пользователя\".");
+            } else {
+                yandexAliceResponse.getResponse().setText("Назовите имя пользователя.");
+                session.setState(SessionState.PENDING_USER_NAME_TO_SWITCH);
+                dictiondaryDao.updateSessionState(session);
+            }
         } else if (session.getState() == SessionState.PENDING_TEST_DICTIONARY && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null) {
             if (tokensContain(skillRequest.getNlu().getTokens(), "общего") >= 0) {
