@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 import ru.golovkin.oxford3000.dictionary.model.Language;
 import ru.golovkin.oxford3000.dictionary.model.ServiceUser;
 import ru.golovkin.oxford3000.dictionary.model.Session;
@@ -335,9 +336,15 @@ public class DictionaryDao {
     public int getDeviceUserCount(YASession session) {
         TypedQuery<Integer> query = entityManager.createQuery("select cast(count(1) as integer) "
             + " from ServiceUser u "
-            + " where extAppId = :appId "
-            +   " and extUserId is null ", Integer.class);
-        query.setParameter("appId", session.getApplication().getApplicationId());
+            + " where "
+            + (session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())?
+                " extUserId = :userId ":
+                " extAppId = :appId and extUserId is null "), Integer.class);
+        if (session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())) {
+            query.setParameter("userId", session.getUser().getUserId());
+        } else {
+            query.setParameter("appId", session.getApplication().getApplicationId());
+        }
         return query.getSingleResult();
     }
 }

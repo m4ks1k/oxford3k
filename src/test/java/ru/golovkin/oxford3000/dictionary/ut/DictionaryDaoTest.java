@@ -748,8 +748,43 @@ public class DictionaryDaoTest {
     void should_return_1_when_calling_getDeviceUserCount_and_only_one_user_exists_with_same_appId_and_empty_userId() {
         serviceUser = createDefaultUser("коля", null, appId);
         entityManager.persist(serviceUser);
+        ServiceUser anotherServiceUser = createDefaultUser("петя", null, appId + "1");
+        entityManager.persist(anotherServiceUser);
 
         assertEquals(1, sut.getDeviceUserCount(New.yaRequest(appId).withSessionId(sessionId).please().getSession()));
+    }
+
+    @Test
+    @Transactional
+    void should_return_2_when_calling_getDeviceUserCount_and_two_users_exist_with_same_appId_and_empty_userId() {
+        serviceUser = createDefaultUser("коля", null, appId);
+        entityManager.persist(serviceUser);
+        ServiceUser anotherServiceUser = createDefaultUser("петя", null, appId);
+        entityManager.persist(anotherServiceUser);
+
+        assertEquals(2, sut.getDeviceUserCount(New.yaRequest(appId).withSessionId(sessionId).please().getSession()));
+    }
+
+    @Test
+    @Transactional
+    void should_return_1_when_calling_getDeviceUserCount_and_only_one_user_exists_with_same_userId() {
+        serviceUser = createDefaultUser("коля", userId, appId);
+        entityManager.persist(serviceUser);
+        ServiceUser anotherServiceUser = createDefaultUser("петя", userId + "1", appId);
+        entityManager.persist(anotherServiceUser);
+
+        assertEquals(1, sut.getDeviceUserCount(New.yaRequest(appId).withUserId(userId).withSessionId(sessionId).please().getSession()));
+    }
+
+    @Test
+    @Transactional
+    void should_return_2_when_calling_getDeviceUserCount_and_two_users_exist_with_same_userId() {
+        serviceUser = createDefaultUser("коля", userId, appId);
+        entityManager.persist(serviceUser);
+        ServiceUser anotherServiceUser = createDefaultUser("петя", userId, appId + "1");
+        entityManager.persist(anotherServiceUser);
+
+        assertEquals(2, sut.getDeviceUserCount(New.yaRequest(appId).withUserId(userId).withSessionId(sessionId).please().getSession()));
     }
 
     private ServiceUser createDefaultUser(String name, String userId, String appId, boolean isLastUsed) {
