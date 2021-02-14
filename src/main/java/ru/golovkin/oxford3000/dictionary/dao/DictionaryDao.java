@@ -347,4 +347,12 @@ public class DictionaryDao {
         }
         return query.getSingleResult();
     }
+
+    public ServiceUser getDeviceUserByName(YASession session, String name) {
+        return null;
+    }
+
+    public List<ServiceUser> getDeviceUsers(YASession session) {
+        return null;
+    }
 }

@@ -13,6 +13,7 @@ import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_RUS_T
 import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_TEST_DICTIONARY;
 import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_TEST_RESPONSE;
 import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_TEST_TYPE_CHOICE;
+import static ru.golovkin.oxford3000.dictionary.model.SessionState.PENDING_USER_NAME_TO_SWITCH;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -727,6 +728,22 @@ public class DictionaryServiceUT {
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("На этом устройстве всего один пользователь. Если вы хотите создать нового, скажите \"добавь пользователя\".").please(), yaResponse);
+    }
+
+    @Test
+    void should_ask_for_another_name_and_enumerate_device_users_from_getDeviceUsers_when_state_is_PENDING_USER_NAME_FOR_SWITCH_and_user_said_name_but_getDeviceUserByName_returned_null() {
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("коля").please();
+        serviceUser = createServiceUser();
+        session = newSession().withState(PENDING_USER_NAME_TO_SWITCH).please();
+        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(dictionaryDao.getDeviceUserByName(yaRequest.getSession(), "коля")).thenReturn(null);
+        when(dictionaryDao.getDeviceUsers(yaRequest.getSession())).thenReturn(
+            Arrays.asList(serviceUser, createServiceUser("Петя", userId))
+        );
+
+        yaResponse = sut.talkYandexAlice(yaRequest);
+
+        assertEquals(New.yaResponse("Максим, я не знаю пользователя Коля на вашем устройстве. Кроме вас зарегистрирован только Петя.").please(), yaResponse);
     }
 
     private ServiceUser createServiceUser(String name, String userId) {

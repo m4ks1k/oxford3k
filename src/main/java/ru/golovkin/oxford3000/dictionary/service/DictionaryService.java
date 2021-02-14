@@ -245,6 +245,26 @@ public class DictionaryService {
                 session.setState(SessionState.PENDING_USER_NAME_TO_SWITCH);
                 dictiondaryDao.updateSessionState(session);
             }
+        } else if (session.getState() == SessionState.PENDING_USER_NAME_TO_SWITCH && commandDefined(skillRequest)) {
+            String userName = skillRequest.getCommand();
+            String userNameFromNLU;
+            if ((userNameFromNLU = definedEntityFIO(skillRequest)) != null) {
+                userName = userNameFromNLU;
+            }
+
+            if (dictiondaryDao.getDeviceUserByName(yandexSession, userName) == null) {
+                String capitalizedName = capitalize(userName);
+                String capitalizedCurrentUser = capitalize(session.getServiceUser().getName());
+                List<ServiceUser> deviceUsers = dictiondaryDao.getDeviceUsers(yandexSession);
+                String capitalizedOtherDeviceUsers = deviceUsers.stream()
+                    .filter( u -> !session.getServiceUser().equals(u)).map(u -> capitalize(u.getName())).collect(
+                        Collectors.joining(", "));
+
+                yandexAliceResponse.getResponse().setText(String.format(
+                    "%1$s, я не знаю пользователя %2$s на вашем устройстве. Кроме вас зарегистрирован%4$s %3$s.",
+                    capitalizedCurrentUser, capitalizedName, capitalizedOtherDeviceUsers, deviceUsers.size() > 2?"ы":" только"
+                ));
+            }
         } else if (session.getState() == SessionState.PENDING_TEST_DICTIONARY && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null) {
             if (tokensContain(skillRequest.getNlu().getTokens(), "общего") >= 0) {
@@ -341,7 +361,7 @@ public class DictionaryService {
     }
 
     private String capitalize(String newUserName) {
-        return Arrays.stream(newUserName.toLowerCase().split(" ")).map(
+        return newUserName == null? null: Arrays.stream(newUserName.toLowerCase().split(" ")).map(
             t -> t.substring(0, 1).toUpperCase() + t.substring(1)
         ).collect(Collectors.joining(" "));
     }
