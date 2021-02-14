@@ -746,6 +746,24 @@ public class DictionaryServiceUT {
         assertEquals(New.yaResponse("Максим, я не знаю пользователя Коля на вашем устройстве. Кроме вас зарегистрирован только Петя.").please(), yaResponse);
     }
 
+    @Test
+    void should_ask_for_another_name_and_enumerate_device_users_from_getDeviceUsers_when_state_is_PENDING_USER_NAME_FOR_SWITCH_and_FIO_defined_but_getDeviceUserByName_returned_null() {
+        yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("коля").with(
+            New.entity("YANDEX.FIO").from(2).to(4).withValue("{\"first_name\": \"василий\", \"patronymic_name\": \"петрович\"}").please()
+        ).please();
+        serviceUser = createServiceUser();
+        session = newSession().withState(PENDING_USER_NAME_TO_SWITCH).please();
+        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(dictionaryDao.getDeviceUserByName(yaRequest.getSession(), "коля")).thenReturn(null);
+        when(dictionaryDao.getDeviceUsers(yaRequest.getSession())).thenReturn(
+            Arrays.asList(serviceUser, createServiceUser("Петя", userId), createServiceUser("антонина воротынская", userId))
+        );
+
+        yaResponse = sut.talkYandexAlice(yaRequest);
+
+        assertEquals(New.yaResponse("Максим, я не знаю пользователя Василий Петрович на вашем устройстве. Кроме вас зарегистрированы Петя, Антонина Воротынская.").please(), yaResponse);
+    }
+
     private ServiceUser createServiceUser(String name, String userId) {
         return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId, "Y");
     }
