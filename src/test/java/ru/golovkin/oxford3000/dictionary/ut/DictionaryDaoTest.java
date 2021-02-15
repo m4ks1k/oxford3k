@@ -876,6 +876,54 @@ public class DictionaryDaoTest {
         assertEquals(Arrays.asList(user2, user1), sut.getDeviceUsers(New.yaRequest(appId).withSessionId(sessionId).please().getSession()));
     }
 
+    @Test
+    @Transactional
+    void should_update_last_used_flag_to_N_for_all_users_with_same_appId_and_empty_userId_except_provided_when_calling_clearDeviceUserLastUsedFlag_with_empty_userId_in_session() {
+        ServiceUser userToClearFlag = createDefaultUser("вася", null, appId);
+        ServiceUser userToNotTouchFlag1 = createDefaultUser("вася", null, appId + "1");
+        ServiceUser userToNotTouchFlag2 = createDefaultUser("вася", userId, appId);
+        ServiceUser userToExclude = createDefaultUser("коля", null, appId);
+        entityManager.persist(userToClearFlag);
+        entityManager.persist(userToNotTouchFlag1);
+        entityManager.persist(userToNotTouchFlag2);
+        entityManager.persist(userToExclude);
+
+        sut.clearDeviceUserLastUsedFlag(New.yaRequest(appId).withSessionId(sessionId).please().getSession(), userToExclude);
+
+        entityManager.refresh(userToClearFlag);
+        entityManager.refresh(userToNotTouchFlag1);
+        entityManager.refresh(userToNotTouchFlag2);
+        entityManager.refresh(userToExclude);
+        assertEquals("N", userToClearFlag.getLastUsed());
+        assertEquals("Y", userToNotTouchFlag1.getLastUsed());
+        assertEquals("Y", userToNotTouchFlag2.getLastUsed());
+        assertEquals("Y", userToExclude.getLastUsed());
+    }
+
+    @Test
+    @Transactional
+    void should_update_last_used_flag_to_N_for_all_users_with_same_userId_except_provided_when_calling_clearDeviceUserLastUsedFlag_with_non_empty_userId_in_session() {
+        ServiceUser userToClearFlag = createDefaultUser("вася", userId, appId);
+        ServiceUser userToNotTouchFlag1 = createDefaultUser("вася", userId + "1", appId);
+        ServiceUser userToNotTouchFlag2 = createDefaultUser("вася", null, appId);
+        ServiceUser userToExclude = createDefaultUser("коля", userId, appId);
+        entityManager.persist(userToClearFlag);
+        entityManager.persist(userToNotTouchFlag1);
+        entityManager.persist(userToNotTouchFlag2);
+        entityManager.persist(userToExclude);
+
+        sut.clearDeviceUserLastUsedFlag(New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).please().getSession(), userToExclude);
+
+        entityManager.refresh(userToClearFlag);
+        entityManager.refresh(userToNotTouchFlag1);
+        entityManager.refresh(userToNotTouchFlag2);
+        entityManager.refresh(userToExclude);
+        assertEquals("N", userToClearFlag.getLastUsed());
+        assertEquals("Y", userToNotTouchFlag1.getLastUsed());
+        assertEquals("Y", userToNotTouchFlag2.getLastUsed());
+        assertEquals("Y", userToExclude.getLastUsed());
+    }
+
     private ServiceUser createDefaultUser(String name, String userId, String appId, boolean isLastUsed) {
         return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId, isLastUsed?"Y":"N");
     }

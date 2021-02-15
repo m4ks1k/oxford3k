@@ -269,7 +269,7 @@ public class DictionaryService {
                 long wordCount = dictiondaryDao.getDictionarySize(switchedUser);
                 yandexAliceResponse.getResponse().setText(String.format(
                     "Рада снова слышать вас, %1$s! "
-                        + "В вашем словаре %2$s. Добавим ещё или будем проверять?",
+                        + "В вашем словаре %2$s. Добавим ещё слова или будем проверять?",
                     capitalize(switchedUser.getName()),
                     wordCount > 0? RussianDeclensionUtil.inclineWithNumeral(wordCount,  Gender.NEUTER, "слово", "слова", "слов"): "пусто"
                 ));
@@ -279,7 +279,7 @@ public class DictionaryService {
                 session.setSuccessTestCount(0);
                 session.setSuccessTestCountInRaw(0);
                 session.setTestCount(0);
-                //TODO update other users as not last used
+                dictiondaryDao.clearDeviceUserLastUsedFlag(yandexSession, switchedUser);
                 dictiondaryDao.updateSessionState(session);
             }
         } else if (session.getState() == SessionState.PENDING_TEST_DICTIONARY && commandDefined(skillRequest) &&

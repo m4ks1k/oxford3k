@@ -311,6 +311,7 @@ public class DictionaryDao {
         return query.getSingleResult() > 0;
     }
 
+    @Transactional
     public ServiceUser addNewUser(YASession session, String userName) {
         String extUserId =
             session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId()) ?
@@ -383,5 +384,21 @@ public class DictionaryDao {
             query.setParameter("appId", session.getApplication().getApplicationId());
         }
         return query.getResultList();
+    }
+
+    @Transactional
+    public void clearDeviceUserLastUsedFlag(YASession session, ServiceUser user) {
+        String extUserId = session.getUser() != null && Strings.isNotBlank(session.getUser().getUserId())?session.getUser().getUserId().trim():null;
+        Query userUpdateQuery = entityManager.createQuery("update ServiceUser u set u.lastUsed = 'N' "
+            + " where u.extAppId = :extAppId "
+            + " and u.extUserId " + (extUserId == null? "is null":" = :extUserId ")
+            + " and u.id <> :id ");
+        userUpdateQuery.setParameter("extAppId", session.getApplication().getApplicationId());
+        if (extUserId != null) {
+            userUpdateQuery.setParameter("extUserId", extUserId);
+        }
+        userUpdateQuery.setParameter("id", user.getId());
+        userUpdateQuery.executeUpdate();
+
     }
 }

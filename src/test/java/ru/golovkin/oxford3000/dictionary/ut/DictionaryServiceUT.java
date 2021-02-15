@@ -777,9 +777,10 @@ public class DictionaryServiceUT {
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Рада снова слышать вас, Коля!"
-            + " В вашем словаре 10 слов. Добавим ещё или будем проверять?").please(), yaResponse);
+            + " В вашем словаре 10 слов. Добавим ещё слова или будем проверять?").please(), yaResponse);
         verify(dictionaryDao, atLeastOnce()).updateSessionState(New.session(sessionId).withState(PENDING_NEW_TERM).withUser(newUser)
             .withSuccessTestCount(0).withTestCount(0).withSuccessTestCountInRaw(0).please());
+        verify(dictionaryDao, atLeastOnce()).clearDeviceUserLastUsedFlag(yaRequest.getSession(), newUser);
     }
     private ServiceUser createServiceUser(String name, String userId) {
         return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId, "Y");
