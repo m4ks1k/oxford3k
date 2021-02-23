@@ -13,6 +13,7 @@ import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.golovkin.oxford3000.dictionary.dao.DictionaryDao;
+import ru.golovkin.oxford3000.dictionary.dao.UserDao;
 import ru.golovkin.oxford3000.dictionary.model.Language;
 import ru.golovkin.oxford3000.dictionary.model.ServiceUser;
 import ru.golovkin.oxford3000.dictionary.model.Session;
@@ -39,7 +40,9 @@ public class DictionaryService {
         "вы умничка", "так держать", "прекрасные результаты", "вы на волне успеха"
     );
     @Autowired
-    private DictionaryDao dictiondaryDao;
+    private DictionaryDao dictionaryDao;
+    @Autowired
+    private UserDao userDao;
 
     public YandexAliceResponse talkYandexAlice(YandexAliceRequest yandexAliceRequest) {
         YandexAliceResponse yandexAliceResponse = yandexResponse();
@@ -52,7 +55,7 @@ public class DictionaryService {
             yandexSession.getApplication() != null?yandexSession.getApplication().getApplicationId():null,
             yandexAliceRequest.getRequest() != null?yandexAliceRequest.getRequest().getCommand():null);
 
-        Session session = dictiondaryDao.getSessionState(yandexSession);
+        Session session = userDao.getSessionState(yandexSession);
         YASkillRequest skillRequest = yandexAliceRequest.getRequest();
         String wordToAdd;
         if (yandexAliceRequest.getRequest() != null && yandexAliceRequest.getRequest().getMarkup() != null
@@ -61,7 +64,7 @@ public class DictionaryService {
         } else if (session.getState() != SessionState.PENDING_NAME && Strings.isBlank(session.getServiceUser().getName())) {
             yandexAliceResponse.getResponse().setText("Привет! Я знаю три тысячи самых важных английских слов по версии Оксфордского университета и помогу вам их выучить. Как вас зовут?");
             session.setState(SessionState.PENDING_NAME);
-            dictiondaryDao.updateSessionState(session);
+            userDao.updateSessionState(session);
         } else if (session.getState() == SessionState.PENDING_NAME && commandDefined(skillRequest)) {
             String name = skillRequest.getCommand();
             String nameFromNLU;
@@ -76,9 +79,9 @@ public class DictionaryService {
                     + "Либо можем начать проверку по общему словарю. Для этого скажите: начинаем проверку. ", name));
             session.getServiceUser().setName(name);
             session.setState(SessionState.PENDING_NEW_TERM);
-            dictiondaryDao.updateSessionState(session);
+            userDao.updateSessionState(session);
         } else if (session.getState() == SessionState.INITIAL && Strings.isNotBlank(session.getServiceUser().getName())) {
-            long dictionarySize = dictiondaryDao.getDictionarySize(session.getServiceUser());
+            long dictionarySize = dictionaryDao.getDictionarySize(session.getServiceUser());
             if (dictionarySize == 0) {
                 yandexAliceResponse.getResponse().setText(
                     String.format("Привет, %s! "
@@ -88,10 +91,10 @@ public class DictionaryService {
                         + "Например: добавь русское слово собака или добавь английское слово dog. "
                         + "Либо можем начать проверку по общему словарю. Для этого скажите: начинаем проверку. ", session.getServiceUser().getName()));
                 session.setState(SessionState.PENDING_NEW_TERM);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             } else {
                 String userDictionarySizeRating = "";
-                int percentile = dictiondaryDao.getUserDictionarySizePercentile(session.getServiceUser());
+                int percentile = dictionaryDao.getUserDictionarySizePercentile(session.getServiceUser());
                 if (percentile > 50) {
                     userDictionarySizeRating = String.format(", и это больше, чем у %s пользователей",
                         RussianDeclensionUtil.inclineWithNumeral(percentile, Gender.MASCULINE, "процент", "процента", "процентов")
@@ -109,7 +112,7 @@ public class DictionaryService {
                         RussianDeclensionUtil.inclineWithNumeral(dictionarySize, Gender.NEUTER, "слово", "слова", "слов"),
                         userDictionarySizeRating));
                 session.setState(SessionState.PENDING_NEW_TERM);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             }
         } else if (session.getState() != SessionState.INITIAL && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null && (tokensContain(skillRequest.getNlu().getTokens(), "расскажи", "что", "ты", "понимаешь") >= 0
@@ -128,55 +131,57 @@ public class DictionaryService {
             yandexAliceResponse.getResponse().setText("Вы не произнесли слово, которое нужно добавить. Нужно было сказать, к примеру, \"добавь русское слово помидор\".");
         } else if (session.getState() == SessionState.PENDING_NEW_TERM && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null && (wordToAdd = getWordAfter(skillRequest.getNlu().getTokens(), "добавь", "русское", "слово")) != null) {
-            if (dictiondaryDao.wordExistsInUserDictionary(wordToAdd, Language.RUSSIAN, session.getServiceUser().getId())) {
+            if (dictionaryDao
+                .wordExistsInUserDictionary(wordToAdd, Language.RUSSIAN, session.getServiceUser().getId())) {
                 yandexAliceResponse.getResponse().setText(String.format("Слово %s уже есть в вашем словаре. Давайте добавим другое.", wordToAdd));
-            } else if (dictiondaryDao.wordExistsInGlobalDictionary(wordToAdd, Language.RUSSIAN)) {
-                List<Term> translations = dictiondaryDao.findTranslations(wordToAdd, Language.RUSSIAN);
+            } else if (dictionaryDao.wordExistsInGlobalDictionary(wordToAdd, Language.RUSSIAN)) {
+                List<Term> translations = dictionaryDao.findTranslations(wordToAdd, Language.RUSSIAN);
                 String translation = translations.stream().filter(Objects::nonNull).map(Term::getTerm).collect(Collectors.joining(" или "));
                 yandexAliceResponse.getResponse().setText(String.format("Я знаю такое слово, оно переводится на английский как %s. Добавила в ваш словарь.", translation));
-                dictiondaryDao.addTermFromGlobalToUserDictionary(wordToAdd, Language.RUSSIAN, session.getServiceUser());
+                dictionaryDao.addTermFromGlobalToUserDictionary(wordToAdd, Language.RUSSIAN, session.getServiceUser());
             } else {
                 yandexAliceResponse.getResponse().setText("В общем словаре нет такого слова, но я могу добавить, если вы знаете перевод. Как оно переводится на английский язык?");
                 session.setState(SessionState.PENDING_ENG_TRANSLATION);
                 session.setLanguage(Language.RUSSIAN);
                 session.setWord(wordToAdd);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             }
         } else if (session.getState() == SessionState.PENDING_NEW_TERM && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null && (wordToAdd = getWordAfter(skillRequest.getNlu().getTokens(), "добавь", "английское", "слово")) != null) {
-            if (dictiondaryDao.wordExistsInUserDictionary(wordToAdd, Language.ENGLISH, session.getServiceUser().getId())) {
+            if (dictionaryDao
+                .wordExistsInUserDictionary(wordToAdd, Language.ENGLISH, session.getServiceUser().getId())) {
                 yandexAliceResponse.getResponse().setText(String.format("Слово %s уже есть в вашем словаре. Давайте добавим другое.", wordToAdd));
-            } else if (dictiondaryDao.wordExistsInGlobalDictionary(wordToAdd, Language.ENGLISH)) {
-                List<Term> translations = dictiondaryDao.findTranslations(wordToAdd, Language.ENGLISH);
+            } else if (dictionaryDao.wordExistsInGlobalDictionary(wordToAdd, Language.ENGLISH)) {
+                List<Term> translations = dictionaryDao.findTranslations(wordToAdd, Language.ENGLISH);
                 String translation = translations.stream().filter(Objects::nonNull).map(Term::getTerm).collect(Collectors.joining(" или "));
                 yandexAliceResponse.getResponse().setText(String.format("Я знаю такое слово, оно переводится на русский как %s. Добавила в ваш словарь.", translation));
-                dictiondaryDao.addTermFromGlobalToUserDictionary(wordToAdd, Language.ENGLISH, session.getServiceUser());
+                dictionaryDao.addTermFromGlobalToUserDictionary(wordToAdd, Language.ENGLISH, session.getServiceUser());
             } else {
                 yandexAliceResponse.getResponse().setText("В общем словаре нет такого слова, но я могу добавить, если вы знаете перевод. Как оно переводится на русский язык?");
                 session.setState(SessionState.PENDING_RUS_TRANSLATION);
                 session.setLanguage(Language.ENGLISH);
                 session.setWord(wordToAdd);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             }
         } else if (session.getState() == SessionState.PENDING_ENG_TRANSLATION && commandDefined(skillRequest)
             && Strings.isNotBlank(session.getWord()) && Language.RUSSIAN.equals(session.getLanguage())) {
             yandexAliceResponse.getResponse().setText("Слово добавлено в ваш словарь.");
             session.setState(SessionState.PENDING_NEW_TERM);
-            dictiondaryDao.addTermWithTranslationInUserDictionary(session.getWord(), session.getLanguage(),
+            dictionaryDao.addTermWithTranslationInUserDictionary(session.getWord(), session.getLanguage(),
                 skillRequest.getCommand(), Language.ENGLISH, session.getServiceUser());
             session.clearWordInfo();
-            dictiondaryDao.updateSessionState(session);
+            userDao.updateSessionState(session);
         } else if (session.getState() == SessionState.PENDING_RUS_TRANSLATION && commandDefined(skillRequest)
             && Strings.isNotBlank(session.getWord()) && Language.ENGLISH.equals(session.getLanguage()) ) {
             yandexAliceResponse.getResponse().setText("Слово добавлено в ваш словарь.");
             session.setState(SessionState.PENDING_NEW_TERM);
-            dictiondaryDao.addTermWithTranslationInUserDictionary(session.getWord(), session.getLanguage(),
+            dictionaryDao.addTermWithTranslationInUserDictionary(session.getWord(), session.getLanguage(),
                 skillRequest.getCommand(), Language.RUSSIAN, session.getServiceUser());
             session.clearWordInfo();
-            dictiondaryDao.updateSessionState(session);
+            userDao.updateSessionState(session);
         } else if (session.getState() == SessionState.PENDING_NEW_TERM && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null && tokensContain(skillRequest.getNlu().getTokens(), "начинаем", "проверку") >= 0) {
-            long dictionarySize = dictiondaryDao.getDictionarySize(session.getServiceUser());
+            long dictionarySize = dictionaryDao.getDictionarySize(session.getServiceUser());
             if (dictionarySize == 0) {
                 yandexAliceResponse.getResponse().setText(
                     "Ваш словарь пуст, поэтому проверять будем по общему словарю. "
@@ -184,7 +189,7 @@ public class DictionaryService {
                     + "Если вы общаетесь со мной голосом, то рекомендую английские, чтобы не возникали сложности с произношением. ");
                 session.setState(SessionState.PENDING_TEST_TYPE_CHOICE);
                 session.setTestDictionary(TestDictionary.COMMON);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             } else if (dictionarySize < 10) {
                 yandexAliceResponse.getResponse().setText(
                     String.format("В вашем словаре сейчас всего %1$s, поэтому проверять будем по общему словарю. "
@@ -193,11 +198,11 @@ public class DictionaryService {
                         RussianDeclensionUtil.inclineWithNumeral(dictionarySize, Gender.NEUTER, "слово", "слова", "слов")));
                 session.setState(SessionState.PENDING_TEST_TYPE_CHOICE);
                 session.setTestDictionary(TestDictionary.COMMON);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             } else {
                 yandexAliceResponse.getResponse().setText("Будем проверять слова из вашего словаря или из общего?");
                 session.setState(SessionState.PENDING_TEST_DICTIONARY);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             }
         } else if (session.getState() == SessionState.PENDING_NEW_TERM && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null && tokensContain(skillRequest.getNlu().getTokens(), "добавь", "пользователя") >= 0) {
@@ -205,7 +210,7 @@ public class DictionaryService {
             yandexAliceResponse.getResponse().setText(
                 "Как зовут нового пользователя?");
             session.setState(SessionState.PENDING_NEW_USER_NAME);
-            dictiondaryDao.updateSessionState(session);
+            userDao.updateSessionState(session);
         } else if (session.getState() == SessionState.PENDING_NEW_USER_NAME && commandDefined(skillRequest)) {
             String newUserName = skillRequest.getCommand();
             String newNameFromNLU;
@@ -213,19 +218,19 @@ public class DictionaryService {
                 newUserName = newNameFromNLU;
             }
 
-            if (dictiondaryDao.checkUserNameExistsOnDevice(yandexSession, newUserName.toLowerCase())) {
+            if (userDao.checkUserNameExistsOnDevice(yandexSession, newUserName.toLowerCase())) {
                 String capitalizedName = capitalize(newUserName);
                 yandexAliceResponse.getResponse().setText(String.format(
                     "Пользователь с именем %1$s уже есть на вашем устройстве. Назовите другое имя.",
                     capitalizedName
                 ));
                 session.setState(SessionState.PENDING_NEW_USER_NAME);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             } else {
-                ServiceUser newUser = dictiondaryDao.addNewUser(yandexSession, capitalize(newUserName));
+                ServiceUser newUser = userDao.addNewUser(yandexSession, capitalize(newUserName));
                 session.setServiceUser(newUser);
                 session.setState(SessionState.PENDING_NEW_TERM);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
                 yandexAliceResponse.getResponse().setText(String.format(
                     "Пользователь %1$s добавлен на ваше устройство.", capitalize(newUserName)
                 ));
@@ -238,12 +243,12 @@ public class DictionaryService {
                 tokensContain(skillRequest.getNlu().getTokens(), "смените", "пользователя") >= 0 ||
                 tokensContain(skillRequest.getNlu().getTokens(), "поменяй", "пользователя") >= 0 ||
                 tokensContain(skillRequest.getNlu().getTokens(), "поменяйте", "пользователя") >= 0)) {
-            if (dictiondaryDao.getDeviceUserCount(yandexSession) < 2) {
+            if (userDao.getDeviceUserCount(yandexSession) < 2) {
                 yandexAliceResponse.getResponse().setText("На этом устройстве всего один пользователь. Если вы хотите создать нового, скажите \"добавь пользователя\".");
             } else {
                 yandexAliceResponse.getResponse().setText("Назовите имя пользователя.");
                 session.setState(SessionState.PENDING_USER_NAME_TO_SWITCH);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             }
         } else if (session.getState() == SessionState.PENDING_USER_NAME_TO_SWITCH && commandDefined(skillRequest)) {
             String userName = skillRequest.getCommand();
@@ -253,10 +258,10 @@ public class DictionaryService {
             }
 
             ServiceUser switchedUser;
-            if ((switchedUser = dictiondaryDao.getDeviceUserByName(yandexSession, userName)) == null) {
+            if ((switchedUser = userDao.getDeviceUserByName(yandexSession, userName)) == null) {
                 String capitalizedName = capitalize(userName);
                 String capitalizedCurrentUser = capitalize(session.getServiceUser().getName());
-                List<ServiceUser> deviceUsers = dictiondaryDao.getDeviceUsers(yandexSession);
+                List<ServiceUser> deviceUsers = userDao.getDeviceUsers(yandexSession);
                 String capitalizedOtherDeviceUsers = deviceUsers.stream()
                     .filter( u -> !session.getServiceUser().equals(u)).map(u -> capitalize(u.getName())).collect(
                         Collectors.joining(", "));
@@ -266,7 +271,7 @@ public class DictionaryService {
                     capitalizedCurrentUser, capitalizedName, capitalizedOtherDeviceUsers, deviceUsers.size() > 2?"ы":" только"
                 ));
             } else {
-                long wordCount = dictiondaryDao.getDictionarySize(switchedUser);
+                long wordCount = dictionaryDao.getDictionarySize(switchedUser);
                 yandexAliceResponse.getResponse().setText(String.format(
                     "Рада снова слышать вас, %1$s! "
                         + "В вашем словаре %2$s. Добавим ещё слова или будем проверять?",
@@ -279,8 +284,8 @@ public class DictionaryService {
                 session.setSuccessTestCount(0);
                 session.setSuccessTestCountInRaw(0);
                 session.setTestCount(0);
-                dictiondaryDao.clearDeviceUserLastUsedFlag(yandexSession, switchedUser);
-                dictiondaryDao.updateSessionState(session);
+                userDao.clearDeviceUserLastUsedFlag(yandexSession, switchedUser);
+                userDao.updateSessionState(session);
             }
         } else if (session.getState() == SessionState.PENDING_TEST_DICTIONARY && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null) {
@@ -289,13 +294,13 @@ public class DictionaryService {
                     + "Если вы общаетесь со мной голосом, то рекомендую английские, чтобы не возникали сложности с произношением. ");
                 session.setTestDictionary(TestDictionary.COMMON);
                 session.setState(SessionState.PENDING_TEST_TYPE_CHOICE);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             } else if (tokensContain(skillRequest.getNlu().getTokens(), "моего") >= 0) {
                 yandexAliceResponse.getResponse().setText("Вы хотите проверять английские слова, русские или вперемешку? "
                     + "Если вы общаетесь со мной голосом, то рекомендую английские, чтобы не возникали сложности с произношением. ");
                 session.setTestDictionary(TestDictionary.USER);
                 session.setState(SessionState.PENDING_TEST_TYPE_CHOICE);
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             } else {
                 yandexAliceResponse.getResponse().setText("Не поняла. Скажите: \"из моего словаря\" или \"из общего словаря\".");
             }
@@ -309,12 +314,13 @@ public class DictionaryService {
                 testType = TestType.MIX;
             }
             if (testType != null) {
-                Term term = dictiondaryDao.getNextRandomTermToTest(session.getServiceUser(), testType, session.getTestDictionary());
+                Term term = dictionaryDao
+                    .getNextRandomTermToTest(session.getServiceUser(), testType, session.getTestDictionary());
                 session.setState(SessionState.PENDING_TEST_RESPONSE);
                 session.setTestType(testType);
                 session.setWord(term.getTerm());
                 session.setLanguage(term.getLanguage());
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
 
                 yandexAliceResponse.getResponse().setText(
                     String.format("Отлично! Начинаем. Как переводится на %1$s слово %2$s?",
@@ -322,7 +328,7 @@ public class DictionaryService {
                         term.getTerm()));
             } else {
                 yandexAliceResponse.getResponse().setText("Не поняла вас. Произнесите один из вариантов: английские, русские или вперемешку.");
-                dictiondaryDao.updateSessionState(session);
+                userDao.updateSessionState(session);
             }
         } else if (session.getState() == SessionState.PENDING_TEST_RESPONSE && commandDefined(skillRequest) &&
             skillRequest.getNlu() != null && tokensContain(skillRequest.getNlu().getTokens(), "останови", "проверку") >= 0) {
@@ -334,11 +340,12 @@ public class DictionaryService {
                     + "Вы хорошо справляетесь.", session.getServiceUser().getName(),
                 RussianDeclensionUtil.inclineWithNumeral(session.getTestCount(), Gender.NEUTER,
                     "слово", "слова", "слов"), session.getSuccessTestCount()));
-            dictiondaryDao.updateSessionState(session);
+            userDao.updateSessionState(session);
         } else if (session.getState() == SessionState.PENDING_TEST_RESPONSE && commandDefined(skillRequest)) {
-            List<Term> translations = dictiondaryDao.findTranslations(session.getWord(), session.getLanguage());
+            List<Term> translations = dictionaryDao.findTranslations(session.getWord(), session.getLanguage());
             Optional<Term> validTranslation = translations.stream().filter(t -> t != null && t.getTerm().equals(skillRequest.getCommand().toLowerCase())).findFirst();
-            Term newTerm = dictiondaryDao.getNextRandomTermToTest(session.getServiceUser(), session.getTestType(), session.getTestDictionary());
+            Term newTerm = dictionaryDao
+                .getNextRandomTermToTest(session.getServiceUser(), session.getTestType(), session.getTestDictionary());
             if (validTranslation.isPresent()) {
                 String congratulation = "Верно!";
                 if (session.getSuccessTestCountInRaw() > 0 && (session.getSuccessTestCountInRaw() + 1) % 5 == 0) {
@@ -355,7 +362,7 @@ public class DictionaryService {
                 session.setSuccessTestCount(session.getSuccessTestCount() + 1);
                 session.setSuccessTestCountInRaw(session.getSuccessTestCountInRaw() + 1);
                 session.setTestCount(session.getTestCount() + 1);
-                dictiondaryDao.updateTestResult(session.getServiceUser(), session.getWord(), session.getLanguage(), SUCCESS);
+                dictionaryDao.updateTestResult(session.getServiceUser(), session.getWord(), session.getLanguage(), SUCCESS);
             } else {
                 String validResponse = translations.stream().filter(Objects::nonNull).map(Term::getTerm).collect(
                     Collectors.joining(" или "));
@@ -367,11 +374,11 @@ public class DictionaryService {
                         newTerm.getTerm()));
                 session.setSuccessTestCountInRaw(0);
                 session.setTestCount(session.getTestCount() + 1);
-                dictiondaryDao.updateTestResult(session.getServiceUser(), session.getWord(), session.getLanguage(), FAIL);
+                dictionaryDao.updateTestResult(session.getServiceUser(), session.getWord(), session.getLanguage(), FAIL);
             }
             session.setWord(newTerm.getTerm());
             session.setLanguage(newTerm.getLanguage());
-            dictiondaryDao.updateSessionState(session);
+            userDao.updateSessionState(session);
         }
 
         return yandexAliceResponse;

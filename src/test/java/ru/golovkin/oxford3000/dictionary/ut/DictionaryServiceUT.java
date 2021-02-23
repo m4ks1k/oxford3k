@@ -29,6 +29,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import ru.golovkin.oxford3000.dictionary.dao.DictionaryDao;
+import ru.golovkin.oxford3000.dictionary.dao.UserDao;
 import ru.golovkin.oxford3000.dictionary.model.Language;
 import ru.golovkin.oxford3000.dictionary.model.ServiceUser;
 import ru.golovkin.oxford3000.dictionary.model.Session;
@@ -52,6 +53,8 @@ import ru.golovkin.oxford3000.dictionary.service.DictionaryService;
 public class DictionaryServiceUT {
     @MockBean
     DictionaryDao dictionaryDao;
+    @MockBean
+    UserDao userDao;
     @Autowired
     DictionaryService sut;
     @Mock
@@ -72,12 +75,12 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withNewSession(sessionId).please();
         serviceUser = createServiceUser(null, null);
         session = newSession().please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Привет! Я знаю три тысячи самых важных английских слов по версии Оксфордского университета и помогу вам их выучить. Как вас зовут?").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NAME).withUser(serviceUser).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NAME).withUser(serviceUser).please());
     }
 
     private SessionBuilder newSession() {
@@ -91,7 +94,7 @@ public class DictionaryServiceUT {
             .please();
         serviceUser = createServiceUser(null);
         session = newSession().withState(PENDING_NAME).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -102,7 +105,7 @@ public class DictionaryServiceUT {
                 + "Либо можем начать проверку по общему словарю. Для этого скажите: начинаем проверку. ").please(),
             yaResponse);
         assertEquals("Иван Петрович", serviceUser.getName());
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
     }
 
     @Test
@@ -110,7 +113,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Name").please();
         serviceUser = createServiceUser(null);
         session = newSession().withState(PENDING_NAME).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -121,7 +124,7 @@ public class DictionaryServiceUT {
                 + "Либо можем начать проверку по общему словарю. Для этого скажите: начинаем проверку. ").please(),
             yaResponse);
         assertEquals("Name", serviceUser.getName());
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
     }
 
     @Test
@@ -129,7 +132,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Name").please();
         serviceUser = createServiceUser("Максим");
         session = newSession().please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getDictionarySize(serviceUser)).thenReturn(0L);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
@@ -141,7 +144,7 @@ public class DictionaryServiceUT {
                 + "Например: добавь русское слово собака или добавь английское слово dog. "
                 + "Либо можем начать проверку по общему словарю. Для этого скажите: начинаем проверку. ").please(),
             yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
     }
 
     @Test
@@ -149,7 +152,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("не понятная фраза").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -162,7 +165,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("расскажи что ты понимаешь").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -177,14 +180,14 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь русское слово кошка").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("кошка", Language.RUSSIAN)).thenReturn(false);
         when(dictionaryDao.wordExistsInUserDictionary("кошка", Language.RUSSIAN, 1L)).thenReturn(false);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("В общем словаре нет такого слова, но я могу добавить, если вы знаете перевод. Как оно переводится на английский язык?").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_ENG_TRANSLATION)
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_ENG_TRANSLATION)
             .withWord("кошка").withLanguage(Language.RUSSIAN).please());
     }
 
@@ -193,7 +196,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь русское слово").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -205,7 +208,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь английское слово").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -217,7 +220,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь русское слово кошка").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("кошка", Language.RUSSIAN)).thenReturn(false);
         when(dictionaryDao.wordExistsInUserDictionary("кошка", Language.RUSSIAN, 1L)).thenReturn(true);
 
@@ -231,7 +234,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь английское слово cat").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("cat", Language.ENGLISH)).thenReturn(false);
         when(dictionaryDao.wordExistsInUserDictionary("cat", Language.ENGLISH, 1L)).thenReturn(true);
 
@@ -245,7 +248,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь английское слово cat").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("cat", Language.ENGLISH)).thenReturn(true);
         when(dictionaryDao.wordExistsInUserDictionary("cat", Language.ENGLISH, 1L)).thenReturn(false);
         when(dictionaryDao.findTranslations("cat", Language.ENGLISH)).thenReturn(Arrays.asList(
@@ -264,7 +267,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Добавь русское слово кошка").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("кошка", Language.RUSSIAN)).thenReturn(true);
         when(dictionaryDao.wordExistsInUserDictionary("кошка", Language.RUSSIAN, 1L)).thenReturn(false);
         when(dictionaryDao.findTranslations("кошка", Language.RUSSIAN)).thenReturn(
@@ -282,12 +285,12 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("cat").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_ENG_TRANSLATION).withWord("кошка").withLanguage(Language.RUSSIAN).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Слово добавлено в ваш словарь.").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
         verify(dictionaryDao, atLeastOnce()).addTermWithTranslationInUserDictionary("кошка", Language.RUSSIAN, "cat", Language.ENGLISH, serviceUser);
     }
 
@@ -296,14 +299,14 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("добавь английское слово cat").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.wordExistsInGlobalDictionary("cat", Language.ENGLISH)).thenReturn(false);
         when(dictionaryDao.wordExistsInUserDictionary("cat", Language.ENGLISH, 1L)).thenReturn(false);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("В общем словаре нет такого слова, но я могу добавить, если вы знаете перевод. Как оно переводится на русский язык?").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_RUS_TRANSLATION)
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_RUS_TRANSLATION)
             .withWord("cat").withLanguage(Language.ENGLISH).please());
     }
 
@@ -312,12 +315,12 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("кошка").please();
         serviceUser = new ServiceUser(1L, "User", UserSource.YANDEX_ALICE, userId, appId, "Y");
         session = newSession().withState(PENDING_RUS_TRANSLATION).withWord("cat").withLanguage(Language.ENGLISH).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Слово добавлено в ваш словарь.").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
         verify(dictionaryDao, atLeastOnce()).addTermWithTranslationInUserDictionary("cat", Language.ENGLISH, "кошка", Language.RUSSIAN, serviceUser);
     }
 
@@ -327,7 +330,7 @@ public class DictionaryServiceUT {
         serviceUser = createServiceUser();
         session = newSession().please();
         yaRequest.getRequest().setMarkup(new YARequestMarkup(true));
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -339,7 +342,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Name").please();
         serviceUser = createServiceUser();
         session = newSession().please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getDictionarySize(serviceUser)).thenReturn(4L);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
@@ -350,7 +353,7 @@ public class DictionaryServiceUT {
                 + "Скажите одну из фраз: добавь русское слово или добавь английское слово. Затем произнесите слово, и я добавлю его в ваш словарь. "
                 + "Либо скажите: начинаем проверку, и я начну спрашивать вас слова.").please(),
             yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
     }
 
     @Test
@@ -358,7 +361,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("Name").please();
         serviceUser = createServiceUser();
         session = newSession().please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getDictionarySize(serviceUser)).thenReturn(4L);
         when(dictionaryDao.getUserDictionarySizePercentile(serviceUser)).thenReturn(90);
 
@@ -370,7 +373,7 @@ public class DictionaryServiceUT {
                 + "Скажите одну из фраз: добавь русское слово или добавь английское слово. Затем произнесите слово, и я добавлю его в ваш словарь. "
                 + "Либо скажите: начинаем проверку, и я начну спрашивать вас слова.").please(),
             yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).please());
     }
 
     @Test
@@ -378,7 +381,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("начинаем проверку").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getDictionarySize(serviceUser)).thenReturn(9L);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
@@ -388,7 +391,7 @@ public class DictionaryServiceUT {
                     + "Вы хотите проверять английские слова, русские или вперемешку? "
                     + "Если вы общаетесь со мной голосом, то рекомендую английские, чтобы не возникали сложности с произношением. "
                 ).please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_TYPE_CHOICE).withTestDictionary(TestDictionary.COMMON).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_TYPE_CHOICE).withTestDictionary(TestDictionary.COMMON).please());
 
     }
 
@@ -397,7 +400,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("начинаем проверку").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getDictionarySize(serviceUser)).thenReturn(0L);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
@@ -407,7 +410,7 @@ public class DictionaryServiceUT {
                 + "Вы хотите проверять английские слова, русские или вперемешку? "
                 + "Если вы общаетесь со мной голосом, то рекомендую английские, чтобы не возникали сложности с произношением. "
         ).please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_TYPE_CHOICE).withTestDictionary(
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_TYPE_CHOICE).withTestDictionary(
             TestDictionary.COMMON).please());
 
     }
@@ -417,7 +420,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("начинаем проверку").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getDictionarySize(serviceUser)).thenReturn(10L);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
@@ -425,7 +428,7 @@ public class DictionaryServiceUT {
         assertEquals(New.yaResponse(
             "Будем проверять слова из вашего словаря или из общего?"
         ).please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_DICTIONARY).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_DICTIONARY).please());
     }
 
     @Test
@@ -433,7 +436,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("из общего словаря").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_TEST_DICTIONARY).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -441,7 +444,7 @@ public class DictionaryServiceUT {
             "Вы хотите проверять английские слова, русские или вперемешку? "
                 + "Если вы общаетесь со мной голосом, то рекомендую английские, чтобы не возникали сложности с произношением. "
         ).please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withTestDictionary(TestDictionary.COMMON).withState(PENDING_TEST_TYPE_CHOICE).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withTestDictionary(TestDictionary.COMMON).withState(PENDING_TEST_TYPE_CHOICE).please());
     }
 
     @Test
@@ -449,7 +452,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("из моего словаря").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_TEST_DICTIONARY).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -457,7 +460,7 @@ public class DictionaryServiceUT {
             "Вы хотите проверять английские слова, русские или вперемешку? "
                 + "Если вы общаетесь со мной голосом, то рекомендую английские, чтобы не возникали сложности с произношением. "
         ).please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withTestDictionary(TestDictionary.USER).withState(PENDING_TEST_TYPE_CHOICE).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withTestDictionary(TestDictionary.USER).withState(PENDING_TEST_TYPE_CHOICE).please());
     }
 
     @Test
@@ -465,7 +468,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("из твоего словаря").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_TEST_DICTIONARY).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -479,7 +482,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("английские").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_TEST_TYPE_CHOICE).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getNextRandomTermToTest(serviceUser, TestType.ENGLISH,
             session.getTestDictionary())).thenReturn(term);
         when(term.getLanguage()).thenReturn(Language.ENGLISH);
@@ -490,7 +493,7 @@ public class DictionaryServiceUT {
         assertEquals(New.yaResponse(
             "Отлично! Начинаем. Как переводится на русский слово cat?"
         ).please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
             .withLanguage(Language.ENGLISH).withWord("cat").withTestType(TestType.ENGLISH).please());
     }
 
@@ -499,7 +502,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("русские слова").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_TEST_TYPE_CHOICE).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getNextRandomTermToTest(serviceUser, TestType.RUSSIAN,
             session.getTestDictionary())).thenReturn(term);
         when(term.getLanguage()).thenReturn(Language.RUSSIAN);
@@ -510,7 +513,7 @@ public class DictionaryServiceUT {
         assertEquals(New.yaResponse(
             "Отлично! Начинаем. Как переводится на английский слово кошка?"
         ).please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
             .withLanguage(Language.RUSSIAN).withWord("кошка").withTestType(TestType.RUSSIAN).please());
     }
 
@@ -519,7 +522,7 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("вперемешку").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_TEST_TYPE_CHOICE).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getNextRandomTermToTest(serviceUser, TestType.MIX,
             session.getTestDictionary())).thenReturn(term);
         when(term.getLanguage()).thenReturn(Language.RUSSIAN);
@@ -530,7 +533,7 @@ public class DictionaryServiceUT {
         assertEquals(New.yaResponse(
             "Отлично! Начинаем. Как переводится на английский слово кошка?"
         ).please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
             .withLanguage(Language.RUSSIAN).withWord("кошка").withTestType(TestType.MIX).please());
     }
 
@@ -539,14 +542,14 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("вразброс").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_TEST_TYPE_CHOICE).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse(
             "Не поняла вас. Произнесите один из вариантов: английские, русские или вперемешку."
         ).please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_TYPE_CHOICE)
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_TYPE_CHOICE)
             .please());
     }
 
@@ -556,13 +559,13 @@ public class DictionaryServiceUT {
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_TEST_RESPONSE).withWord("кошка").withLanguage(Language.RUSSIAN).withTestType(TestType.MIX)
             .withTestCount(20).withSuccessTestCount(5).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Останавливаю проверку. Максим, мы с вами проверили 20 слов, из них правильных ответов 5. "
             + "Вы хорошо справляетесь.").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).withTestCount(20).withSuccessTestCount(5).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_NEW_TERM).withTestCount(20).withSuccessTestCount(5).please());
     }
 
     @Test
@@ -572,7 +575,7 @@ public class DictionaryServiceUT {
         session = newSession().withState(PENDING_TEST_RESPONSE).withWord("кошка").withLanguage(Language.RUSSIAN).withTestType(TestType.MIX)
             .withTestDictionary(TestDictionary.COMMON)
             .withTestCount(10).withSuccessTestCount(5).withSuccessTestCountInRaw(2).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getNextRandomTermToTest(serviceUser, TestType.MIX, TestDictionary.COMMON)).thenReturn(newTerm);
         when(newTerm.getLanguage()).thenReturn(Language.ENGLISH);
         when(newTerm.getTerm()).thenReturn("dog");
@@ -582,7 +585,7 @@ public class DictionaryServiceUT {
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Верно! Как переводится на русский слово dog?").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
             .withLanguage(Language.ENGLISH).withWord("dog").withTestType(TestType.MIX).withTestDictionary(TestDictionary.COMMON)
             .withTestCount(11).withSuccessTestCount(6).withSuccessTestCountInRaw(3).please());
         verify(dictionaryDao, atLeastOnce()).updateTestResult(serviceUser, "кошка", Language.RUSSIAN, DictionaryService.SUCCESS);
@@ -595,7 +598,7 @@ public class DictionaryServiceUT {
         session = newSession().withState(PENDING_TEST_RESPONSE).withWord("кошка").withLanguage(Language.RUSSIAN).withTestType(TestType.MIX)
             .withTestDictionary(TestDictionary.USER)
             .withTestCount(10).withSuccessTestCount(5).withSuccessTestCountInRaw(9).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getNextRandomTermToTest(serviceUser, TestType.MIX, TestDictionary.USER)).thenReturn(newTerm);
         when(newTerm.getLanguage()).thenReturn(Language.ENGLISH);
         when(newTerm.getTerm()).thenReturn("dog");
@@ -610,7 +613,7 @@ public class DictionaryServiceUT {
             "Максим, прекрасные результаты! 10 правильных ответов подряд. Как переводится на русский слово dog?",
             "Максим, вы на волне успеха! 10 правильных ответов подряд. Как переводится на русский слово dog?"
         );
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
             .withLanguage(Language.ENGLISH).withWord("dog").withTestType(TestType.MIX).withTestDictionary(TestDictionary.USER)
             .withTestCount(11).withSuccessTestCount(6).withSuccessTestCountInRaw(10).please());
         verify(dictionaryDao, atLeastOnce()).updateTestResult(serviceUser, "кошка", Language.RUSSIAN, DictionaryService.SUCCESS);
@@ -623,7 +626,7 @@ public class DictionaryServiceUT {
         session = newSession().withState(PENDING_TEST_RESPONSE).withWord("кошка").withLanguage(Language.RUSSIAN).withTestType(TestType.RUSSIAN)
             .withTestDictionary(TestDictionary.USER)
             .withTestCount(10).withSuccessTestCount(5).withSuccessTestCountInRaw(2).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
         when(dictionaryDao.getNextRandomTermToTest(serviceUser, TestType.RUSSIAN, TestDictionary.USER)).thenReturn(newTerm);
         when(newTerm.getLanguage()).thenReturn(Language.RUSSIAN);
         when(newTerm.getTerm()).thenReturn("собака");
@@ -634,7 +637,7 @@ public class DictionaryServiceUT {
 
         assertEquals(New.yaResponse("Не верно! Слово кошка переводится на английский как cat или kitty."
             + " Как переводится на английский слово собака?").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(PENDING_TEST_RESPONSE)
             .withLanguage(Language.RUSSIAN).withWord("собака").withTestType(TestType.RUSSIAN).withTestDictionary(TestDictionary.USER)
             .withTestCount(11).withSuccessTestCount(5).withSuccessTestCountInRaw(0).please());
         verify(dictionaryDao, atLeastOnce()).updateTestResult(serviceUser, "кошка", Language.RUSSIAN, DictionaryService.FAIL);
@@ -645,12 +648,12 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("добавь пользователя").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Как зовут нового пользователя?").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
     }
 
     @Test
@@ -658,13 +661,13 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("василий петрович").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_USER_NAME).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
-        when(dictionaryDao.checkUserNameExistsOnDevice(yaRequest.getSession(), "василий петрович")).thenReturn(true);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.checkUserNameExistsOnDevice(yaRequest.getSession(), "василий петрович")).thenReturn(true);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Пользователь с именем Василий Петрович уже есть на вашем устройстве. Назовите другое имя.").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
     }
 
     @Test
@@ -675,15 +678,15 @@ public class DictionaryServiceUT {
         serviceUser = createServiceUser();
         ServiceUser newServiceUser = createServiceUser("василий петрович", userId);
         session = newSession().withState(PENDING_NEW_USER_NAME).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
-        when(dictionaryDao.checkUserNameExistsOnDevice(yaRequest.getSession(), "василий петрович")).thenReturn(false);
-        when(dictionaryDao.addNewUser(yaRequest.getSession(), "Василий Петрович")).thenReturn(newServiceUser);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.checkUserNameExistsOnDevice(yaRequest.getSession(), "василий петрович")).thenReturn(false);
+        when(userDao.addNewUser(yaRequest.getSession(), "Василий Петрович")).thenReturn(newServiceUser);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Пользователь Василий Петрович добавлен на ваше устройство.").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).addNewUser(yaRequest.getSession(), "Василий Петрович");
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withUser(newServiceUser).withState(
+        verify(userDao, atLeastOnce()).addNewUser(yaRequest.getSession(), "Василий Петрович");
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withUser(newServiceUser).withState(
             PENDING_NEW_TERM).please());
     }
 
@@ -694,13 +697,13 @@ public class DictionaryServiceUT {
         ).please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_USER_NAME).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
-        when(dictionaryDao.checkUserNameExistsOnDevice(yaRequest.getSession(), "василий петрович")).thenReturn(true);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.checkUserNameExistsOnDevice(yaRequest.getSession(), "василий петрович")).thenReturn(true);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Пользователь с именем Василий Петрович уже есть на вашем устройстве. Назовите другое имя.").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_NEW_USER_NAME).please());
     }
 
     @Test
@@ -708,13 +711,13 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("переключи пользователя").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
-        when(dictionaryDao.getDeviceUserCount(yaRequest.getSession())).thenReturn(2);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getDeviceUserCount(yaRequest.getSession())).thenReturn(2);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Назовите имя пользователя.").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_USER_NAME_TO_SWITCH).please());
+        verify(userDao, atLeastOnce()).updateSessionState(newSession().withState(SessionState.PENDING_USER_NAME_TO_SWITCH).please());
     }
 
     @Test
@@ -722,8 +725,8 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("переключи пользователя").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_NEW_TERM).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
-        when(dictionaryDao.getDeviceUserCount(yaRequest.getSession())).thenReturn(1);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getDeviceUserCount(yaRequest.getSession())).thenReturn(1);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
@@ -735,9 +738,9 @@ public class DictionaryServiceUT {
         yaRequest = New.yaRequest(appId).withSessionId(sessionId).withUserId(userId).withUtterance("коля").please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_USER_NAME_TO_SWITCH).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
-        when(dictionaryDao.getDeviceUserByName(yaRequest.getSession(), "коля")).thenReturn(null);
-        when(dictionaryDao.getDeviceUsers(yaRequest.getSession())).thenReturn(
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getDeviceUserByName(yaRequest.getSession(), "коля")).thenReturn(null);
+        when(userDao.getDeviceUsers(yaRequest.getSession())).thenReturn(
             Arrays.asList(serviceUser, createServiceUser("Петя", userId))
         );
 
@@ -753,9 +756,9 @@ public class DictionaryServiceUT {
         ).please();
         serviceUser = createServiceUser();
         session = newSession().withState(PENDING_USER_NAME_TO_SWITCH).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
-        when(dictionaryDao.getDeviceUserByName(yaRequest.getSession(), "василий петрович")).thenReturn(null);
-        when(dictionaryDao.getDeviceUsers(yaRequest.getSession())).thenReturn(
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getDeviceUserByName(yaRequest.getSession(), "василий петрович")).thenReturn(null);
+        when(userDao.getDeviceUsers(yaRequest.getSession())).thenReturn(
             Arrays.asList(serviceUser, createServiceUser("Петя", userId), createServiceUser("антонина воротынская", userId))
         );
 
@@ -770,17 +773,17 @@ public class DictionaryServiceUT {
         serviceUser = createServiceUser();
         ServiceUser newUser = createServiceUser("коля", userId);
         session = newSession().withState(PENDING_USER_NAME_TO_SWITCH).please();
-        when(dictionaryDao.getSessionState(yaRequest.getSession())).thenReturn(session);
-        when(dictionaryDao.getDeviceUserByName(yaRequest.getSession(), "коля")).thenReturn(newUser);
+        when(userDao.getSessionState(yaRequest.getSession())).thenReturn(session);
+        when(userDao.getDeviceUserByName(yaRequest.getSession(), "коля")).thenReturn(newUser);
         when(dictionaryDao.getDictionarySize(newUser)).thenReturn(10L);
 
         yaResponse = sut.talkYandexAlice(yaRequest);
 
         assertEquals(New.yaResponse("Рада снова слышать вас, Коля!"
             + " В вашем словаре 10 слов. Добавим ещё слова или будем проверять?").please(), yaResponse);
-        verify(dictionaryDao, atLeastOnce()).updateSessionState(New.session(sessionId).withState(PENDING_NEW_TERM).withUser(newUser)
+        verify(userDao, atLeastOnce()).updateSessionState(New.session(sessionId).withState(PENDING_NEW_TERM).withUser(newUser)
             .withSuccessTestCount(0).withTestCount(0).withSuccessTestCountInRaw(0).please());
-        verify(dictionaryDao, atLeastOnce()).clearDeviceUserLastUsedFlag(yaRequest.getSession(), newUser);
+        verify(userDao, atLeastOnce()).clearDeviceUserLastUsedFlag(yaRequest.getSession(), newUser);
     }
     private ServiceUser createServiceUser(String name, String userId) {
         return new ServiceUser(null, name, UserSource.YANDEX_ALICE, userId, appId, "Y");
